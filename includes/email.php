@@ -176,10 +176,10 @@ if ( isset( $_REQUEST['visual-form-builder-submit'] ) ) :
 			$value = ( isset( $_POST[ 'vfb-' . $field->field_id ] ) ) ? $_POST[ 'vfb-' . $field->field_id ] : '';
 			
 			// If time field, build proper output
-			if ( is_array( $value ) && array_key_exists( 'hour', $value ) && array_key_exists( 'min', $value ) )
+			if ( is_array( $value ) && $field->field_type == 'time' )
 				$value = ( array_key_exists( 'ampm', $value ) ) ? substr_replace( implode( ':', $value ), ' ', 5, 1 ) : implode( ':', $value );
 			// If address field, build proper output
-			elseif ( is_array( $value ) && array_key_exists( 'address', $value ) && array_key_exists( 'address-2', $value ) ) {
+			elseif ( is_array( $value ) && $field->field_type == 'address' ) {
 				$address = '';
 				
 				if ( !empty( $value['address'] ) )
@@ -329,7 +329,7 @@ if ( isset( $_REQUEST['visual-form-builder-submit'] ) ) :
 	$from_email = ( $sitename == $domain ) ? $from_email : "wordpress@$sitename";
 	
 	$reply_to 	= "\"$header_from_name\" <$header_from>";
-	$headers = "Sender: $from_email\r\n" . "From: $reply_to\r\n" . "Content-Type: $header_content_type; charset=\"" . get_option('blog_charset') . "\"\r\n";
+	$headers = "Sender: $from_email\r\n" . "From: $reply_to\r\n" . "Reply-To: $reply_to\r\n" . "Content-Type: $header_content_type; charset=\"" . get_option('blog_charset') . "\"\r\n";
 	
 	// Send the mail
 	foreach ( $form_settings->form_to as $email ) {
@@ -345,7 +345,7 @@ if ( isset( $_REQUEST['visual-form-builder-submit'] ) ) :
 		$reply_name 	= stripslashes( $form_settings->form_notification_email_name );
 		$reply_email 	= $form_settings->form_notification_email_from;
 		$reply_to 		= "\"$reply_name\" <$reply_email>";
-		$headers = "Sender: $from_email\r\n" . "From: $reply_to\r\n" . "Content-Type: $header_content_type; charset=\"" . get_option('blog_charset') . "\"\r\n";
+		$headers = "Sender: $from_email\r\n" . "From: $reply_to\r\n" . "Reply-To: $reply_to\r\n" . "Content-Type: $header_content_type; charset=\"" . get_option('blog_charset') . "\"\r\n";
 		
 		// Send the mail
 		wp_mail( $copy_email, wp_specialchars_decode( $form_settings->form_notification_subject, ENT_QUOTES ), $auto_response_email, $headers, $attachments );

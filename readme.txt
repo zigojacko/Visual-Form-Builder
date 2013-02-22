@@ -3,8 +3,8 @@ Contributors: mmuro
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=G87A9UN9CLPH4&lc=US&item_name=Visual%20Form%20Builder&currency_code=USD&bn=PP%2dDonationsBF%3abtn_donate_SM%2egif%3aNonHosted
 Tags: form, forms, contact form, form to email, email form, email, input, validation, jquery, shortcode
 Requires at least: 3.4.1
-Tested up to: 3.5
-Stable tag: 2.6.7
+Tested up to: 3.5.1
+Stable tag: 2.6.9
 License: GPLv2 or later
 
 Build beautiful, fully functional forms in only a few minutes without writing PHP, CSS, or HTML.
@@ -12,6 +12,10 @@ Build beautiful, fully functional forms in only a few minutes without writing PH
 == Description ==
 
 *Visual Form Builder* is a plugin that allows you to build and manage all kinds of forms for your website in a single place.  Building a fully functional form takes only a few minutes and you don't have to write one bit of PHP, CSS, or HTML!
+
+= Upgrade to Visual Form Builder Pro =
+
+If you are a fan of Visual Form Builder and want extra features and functionality, [Visual Form Builder Pro](http://vfb.matthewmuro.com) is available for only **$10**.
 
 = Features =
 
@@ -209,6 +213,25 @@ To Export Selected:
 4. Rendered form on a page
 
 == Changelog ==
+
+**Version 2.6.9**
+
+* Fix bug where Validation would be removed on saving predefined fields
+
+**Version 2.6.8**
+
+* Add Reply-To to email headers for better compatibility with some email servers
+* Add new Fields selection in Export
+* Update CSV export to be more reliable
+* Update certain input field types to HTML5 input types
+* Update vfb_address_labels filter to allow control over Address field
+* Fix bug where Address field sanitization stripped &lt;br&gt; tags
+* Fix bug where i18n file was improperly loaded
+* Fix bug in Instructions description where HTML tags were encoded in admin
+* Fix bug that allowed validation dropdown to be active in certain predefined fields
+* Check DB version and update with proper plugins_loaded action
+* Deprecate use of CDN for certain files in favor of locally hosted versions
+* Deprecate Export Selected in favor of more reliable exporting on the Export screen
 
 **Version 2.6.7**
 
@@ -449,6 +472,12 @@ To Export Selected:
 * Plugin launch!
 
 == Upgrade Notice ==
+
+= 2.6.9 =
+Fix bug where Validation would be removed on saving predefined fields
+
+= 2.6.8 =
+Add Reply-To to email headers for better compatibility with some email servers; updated CSV export 
 
 = 2.6.7 =
 Fix bug where notification email did not send

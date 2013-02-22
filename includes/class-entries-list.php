@@ -173,8 +173,7 @@ class VisualFormBuilder_Entries_List extends WP_List_Table {
 	 */
 	function get_bulk_actions() {
 		$actions = array(
-			'delete' 			=> __( 'Delete' , 'visual-form-builder'),
-			'export-selected' 	=> __( 'Export Selected' , 'visual-form-builder')
+			'delete' => __( 'Delete' , 'visual-form-builder'),
 		);
 		
 		return $actions;
@@ -187,15 +186,6 @@ class VisualFormBuilder_Entries_List extends WP_List_Table {
 	 */
 	function process_bulk_action() {
 		switch( $this->current_action() ) {
-			case 'export-selected' :
-				$entry_id = ( isset( $_REQUEST['entry'] ) && is_array( $_REQUEST['entry'] ) ) ? (array) $_REQUEST['entry'] : '';
-				
-				$export = $this->export_entries( $entry_id );
-				
-				// Don't do anything if no entry was selected; otherwise, die() properly
-				if ( !is_wp_error( $export ) )
-					die();
-			break;
 			
 			case 'delete' :
 				$entry_id = ( isset( $_REQUEST['entry'] ) && is_array( $_REQUEST['entry'] ) ) ? $_REQUEST['entry'] : array( $_REQUEST['entry'] );
@@ -209,180 +199,7 @@ class VisualFormBuilder_Entries_List extends WP_List_Table {
 			break;
 		}
 	}
-	
-	/**
-	 * Handle the entries CSV export
-	 * 
-	 * @since 1.4
-	 */
-	function export_entries( $selected = NULL ) {		
-		global $wpdb;
 		
-		// If no entry has been checked, return an error
-		if ( empty( $selected ) )
-			return new WP_Error( 'VFB_selected_entries_error', __( 'You must select at least one entry to export.', 'visual-form-builder' ) );
-		
-		// Setup our query to accept selected entry IDs	
-		if ( is_array( $selected ) && !empty( $selected ) )
-			$selected = " WHERE entries.entries_id IN (" . implode( ',', $selected ) . ")";
-	
-		$entries = $wpdb->get_results( "SELECT entries.*, forms.form_title FROM $this->entries_table_name AS entries JOIN $this->form_table_name AS forms USING(form_id) $selected ORDER BY entries_id DESC" );
-		
-		$sitename = sanitize_key( get_bloginfo( 'name' ) );
-		if ( ! empty($sitename) ) $sitename .= '.';
-		$filename = $sitename . 'vfb.selected-entries.' . date( 'Y-m-d' ) . '.csv';
-		
-		header( 'Content-Description: File Transfer' );
-		header( 'Content-Disposition: attachment; filename=' . $filename );
-		header( 'Content-Type: text/csv; charset=' . get_option( 'blog_charset' ), true );
-		
-		// If there's entries returned, do our CSV stuff
-		if ( $entries ) :
-			
-			// Setup our default columns
-			$cols = array(
-				'entries_id' 		=> array( 'header' => __( 'Entries ID' , 'visual-form-builder'), 'data' => array() ),
-				'form_title'		=> array( 'header' => __( 'Form' , 'visual-form-builder'), 'data' => array() ),
-				'date_submitted'	=> array( 'header' => __( 'Date Submitted' , 'visual-form-builder'), 'data' => array() ),
-				'ip_address' 		=> array( 'header' => __( 'IP Address' , 'visual-form-builder'), 'data' => array() ),
-				'subject' 			=> array( 'header' => __( 'Email Subject' , 'visual-form-builder'), 'data' => array() ),
-				'sender_name' 		=> array( 'header' => __( 'Sender Name' , 'visual-form-builder'), 'data' => array() ),
-				'sender_email' 		=> array( 'header' => __( 'Sender Email' , 'visual-form-builder'), 'data' => array() ),
-				'emails_to' 		=> array( 'header' => __( 'Emailed To' , 'visual-form-builder'), 'data' => array() )
-			);
-			
-			// Initialize row index at 0
-			$row = 0;
-			
-			// Loop through all entries
-			foreach ( $entries as $entry ) {
-				// Loop through each entry and its fields
-				foreach ( $entry as $key => $value ) {
-					// Handle each column in the entries table
-					switch ( $key ) {
-						case 'entries_id':
-						case 'form_title':
-						case 'date_submitted':
-						case 'ip_address':
-						case 'subject':
-						case 'sender_name':
-						case 'sender_email':
-							$cols[ $key ][ 'data' ][ $row ] = $value;
-						break;
-						
-						case 'emails_to':
-							$cols[ $key ][ 'data' ][ $row ] = implode( ',', maybe_unserialize( $value ) );
-						break;
-						
-						case 'data':
-							// Unserialize value only if it was serialized
-							$fields = maybe_unserialize( $value );
-							
-							// Loop through our submitted data
-							foreach ( $fields as $field_key => $field_value ) :
-								if ( !is_array( $field_value ) ) {
-
-									// Replace quotes for the header
-									$header = str_replace( '"', '""', ucwords( $field_key ) );
-
-									// Replace all spaces for each form field name
-									$field_key = preg_replace( '/(\s)/i', '', $field_key );
-									
-									// Find new field names and make a new column with a header
-									if ( !array_key_exists( $field_key, $cols ) )
-										$cols[ $field_key ] = array( 'header' => $header, 'data' => array() );									
-									
-									// Get rid of single quote entity
-									$field_value = str_replace( '&#039;', "'", $field_value );
-									
-									// Load data, row by row
-									$cols[ $field_key ][ 'data' ][ $row ] = str_replace( '"', '""', stripslashes( html_entity_decode( $field_value ) ) );
-								}
-								else {
-									// Cast each array as an object
-									$obj = (object) $field_value;
-									
-									switch ( $obj->type ) {
-										case 'fieldset' :
-										case 'section' :
-										case 'instructions' :
-										case 'verification' :
-										case 'secret' :
-										case 'submit' :
-										break;
-										
-										default :
-											// Replace quotes for the header
-											$header = str_replace( '"', '""', $obj->name );
-											
-											// Replace all spaces for each form field name
-											$field_key = preg_replace( '/(\s)/i', '', strtolower( $obj->name ) );
-											
-											// Find new field names and make a new column with a header
-											if ( !array_key_exists( $field_key, $cols ) )
-												$cols[ $field_key ] = array( 'header' => $header, 'data' => array() );									
-											
-											// Get rid of single quote entity
-											$obj->value = str_replace( '&#039;', "'", $obj->value );
-											
-											// Load data, row by row
-											$cols[ $field_key ][ 'data' ][ $row ] = str_replace( '"', '""', stripslashes( html_entity_decode( $obj->value ) ) );
-
-										break;
-									}	//end switch
-								}	//end if is_array check
-							endforeach;	//end fields loop
-						break;	//end entries switch
-					}	//end entries data loop
-				}	//end loop through entries
-				
-				$row++;
-			}//end if entries exists check
-			
-			// Setup our CSV vars
-			$csv_headers = NULL;
-			$csv_rows = array();
-			
-			// Loop through each column
-			foreach ( $cols as $data ) {
-				// End our header row, if needed
-				if ( $csv_headers )
-					$csv_headers .= $this->delimiter;
-				
-				// Build our headers
-				$csv_headers .= "{$data['header']}";
-				
-				// Loop through each row of data and add to our CSV
-				for ( $i = 0; $i < $row; $i++ ) {
-					// End our row of data, if needed
-					if ( array_key_exists( $i, $csv_rows ) && !empty( $csv_rows[ $i ] ) )
-						$csv_rows[ $i ] .= $this->delimiter;
-					elseif ( !array_key_exists( $i, $csv_rows ) )
-						$csv_rows[ $i ] = '';
-					
-					// Add a starting quote for this row's data
-					$csv_rows[ $i ] .= '"';
-					
-					// If there's data at this point, add it to the row
-					if ( array_key_exists( $i, $data[ 'data' ] ) )
-						$csv_rows[ $i ] .=  $data[ 'data' ][ $i ];
-					
-					// Add a closing quote for this row's data
-					$csv_rows[ $i ] .= '"';				
-				}			
-			}
-			
-			// Print headers for the CSV
-			echo "$csv_headers\n";
-			
-			// Print each row of data for the CSV
-			foreach ( $csv_rows as $row ) {
-				echo "$row\n";
-			}
-			
-		endif;
-	}
-	
 	/**
 	 * Adds our forms filter dropdown
 	 * 
