@@ -15,11 +15,6 @@ if ( true == $required && !empty( $secret_field ) ) {
 		
 // Basic security check before moving any further
 if ( isset( $_REQUEST['visual-form-builder-submit'] ) ) :
-	$nonce = $_REQUEST['_wpnonce'];
-	
-	// Security check to verify the nonce
-	if ( ! wp_verify_nonce( $nonce, 'visual-form-builder-nonce' ) )
-		wp_die( __( 'Security check: unable to verify nonce value.' , 'visual-form-builder' ), '', array( 'back_link' => true ) );
 	
 	// Test if it's a known SPAM bot
 	if ( $this->isBot() )
@@ -281,7 +276,7 @@ if ( isset( $_REQUEST['visual-form-builder-submit'] ) ) :
 		'sender_email' 		=> $form_settings->form_from,
 		'emails_to' 		=> serialize( $form_settings->form_to ),
 		'date_submitted' 	=> date_i18n( 'Y-m-d G:i:s' ),
-		'ip_address' 		=> $_SERVER['REMOTE_ADDR']
+		'ip_address' 		=> esc_html( $_SERVER['REMOTE_ADDR'] )
 	);
 	
 	// Insert this data into the entries table

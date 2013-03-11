@@ -30,7 +30,7 @@
 			<tr valign="top">
 				<th scope="row"><label for="form-email-from"><?php _e( 'Reply-To E-mail' , 'visual-form-builder'); ?></label></th>
 				<td>
-					<input type="text" value="" placeholder="" class="regular-text" id="form-email-from" name="form_email_from" />
+					<input type="text" value="" placeholder="" class="regular-text required" id="form-email-from" name="form_email_from" />
 					<p class="description"><?php _e( 'Required. Replies to your email will go here.' , 'visual-form-builder'); ?></p>
 					<p class="description"><?php _e( 'Tip: for best results, use an email that exists on this domain.' , 'visual-form-builder'); ?></p>
 				</td>

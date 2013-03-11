@@ -4,7 +4,7 @@ Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=G87A9
 Tags: form, forms, contact form, form to email, email form, email, input, validation, jquery, shortcode
 Requires at least: 3.4.1
 Tested up to: 3.5.1
-Stable tag: 2.6.9
+Stable tag: 2.7
 License: GPLv2 or later
 
 Build beautiful, fully functional forms in only a few minutes without writing PHP, CSS, or HTML.
@@ -84,9 +84,7 @@ If you are a fan of Visual Form Builder and want extra features and functionalit
 = SPAM Protection =
 
 * Automatically included on every form
-* Uses a simple, yet effective, logic-based verification system
-* [WordPress Nonce](http://codex.wordpress.org/WordPress_Nonces)
-
+* Uses a simple and accessible, yet effective, [text CAPTCHA](http://textcaptcha.com/) verification system
 
 == Installation ==
 
@@ -106,21 +104,43 @@ If you are a fan of Visual Form Builder and want extra features and functionalit
 1. Drag and drop the elements to put them in order.
 1. Click Save Form to save your changes.
 
-= What's the deal with the fieldsets? =
-
-Fieldsets, a way to group form fields, are an essential piece of this plugin's HTML. As such, at least one fieldset is required and must be first in the order. Subsequent fieldsets may be placed wherever you would like to start your next grouping of fields.
-
 = Can I use my own verification system such as a CAPTCHA? =
 
-Because of the accessibility and usability problems inherent with a CAPTCHA system, Visual Form Builder will not be using such a system. Other methods of SPAM prevention will be explored to further enhance protection of your forms.
+Because of the accessibility and usability problems inherent with a CAPTCHA system, Visual Form Builder will not be using such a system.
 
-= I'm not getting any emails! What's wrong? =
+Visual Form Builder uses a [text CAPTCHA](http://textcaptcha.com/). If you decide to upgrade to Visual Form Builder Pro, you will gain [Akismet](https://akismet.com/) support.
 
-Some people have reported that after the form is submitted, no email is received.  If this is the case for you, it typically means that your server or web host has not properly configured their SMTP settings.
+= Emails are not being sent =
+
+*Note*: Form submissions will always be saved in the database whether or not the email was sent.
+
+**Check SPAM folder**
+
+A quick look in the SPAM folder will tell you if the emails are being routed into the folder. If so, simply train your email client to not treat those emails as SPAM
+
+**Configure your site to use SMTP**
+
+Some people have reported that after the form is submitted, no email is received. If this is the case for you, it typically means that your server or web host has not properly configured their SMTP settings.
 
 Try using a plugin such as [WP Mail SMTP](http://wordpress.org/extend/plugins/wp-mail-smtp/) to correct the issue.
 
-= Something in my theme isn't working anymore. What's wrong? =
+**Set the Reply-To email to a same domain email**
+
+Setting up SMTP will get you part of the way there. For most, it solves the problem. For others, it requires additional configuration
+
+If you find that emails are not being sent, you should first confirm that you have completed all of the details in the `Form Settings > Email section`. Next, be sure to set the Reply-To option to an email that exists on the same domain as your WordPress site.
+
+**Possible mod_security conflict**
+
+Some servers are overzealous in their restrictions on the $_POST object and will block anything with certain keywords. Check your server logs and look for any 403 Forbidden or 500 Internal Server errors. If you notice these errors when submitting a form, contact your host and find out if there are any restrictions.
+
+**Enable local mail for your domain**
+
+Be sure to enable local mail delivery for your domain. Disabling local mail delivery is common if you are using an external mail server, but can cause bounce-backs saying the email user does not exist.
+
+Also, if possible, check your server’s email logs or have your host check them for you and see if it’s refusing to send an email. It’s possible your email server is attempting to send the emails but can’t for missing mail resources, security, SPAM filtering, or other technical problems.
+
+= Resolving Theme or Plugin Conflicts =
 
 Visual Form Builder is built using preferred WordPress coding standards. In many cases, some theme authors or plugin developers do not follow these standards and it causes conflicts with those that do follow the standards. The two most common issues have to do with either jQuery or CSS.
 
@@ -130,7 +150,7 @@ Visual Form Builder requires at least jQuery version 1.7. Please make sure your 
 
 **CSS conflicts**
 
-If your forms do not look as expected, chances are there's some CSS in your theme conflicting with the built-in CSS of Visual Form Builder. Please follow the instructions on how to customize the CSS.
+If your forms do not look as expected, chances are there's some CSS in your theme conflicting with the built-in CSS of Visual Form Builder. Please follow the tutorial on [how to customize the CSS](http://matthewmuro.com/2012/11/15/visual-form-builder-pro-customizing-the-form-design/).
 
 **Theme conflicts**
 
@@ -153,26 +173,20 @@ If everything works with only Visual Form Builder activated, you have a plugin c
 
 If, after following the above procedures, you are still having problems please report this issue on the [Support Forum](http://wordpress.org/support/plugin/visual-form-builder). 
 
-= How do I customize the CSS? =
+= Customizing the form design =
 
-If you want to customize the appearance of the forms using your own CSS, here's how to do it:
+Please follow the tutorial on [how to customize the CSS](http://matthewmuro.com/2012/11/15/visual-form-builder-pro-customizing-the-form-design/).
 
-1. Add this code to your theme's `functions.php` file: `add_filter( 'visual-form-builder-css', '__return_false' );`
-1. Copy everything from `css/visual-form-builder.css` into your theme's `style.css`
-1. Change the CSS properties in your theme's `style.css` as needed
+= Customizing the Date Picker =
 
-If you want to customize the jQuery date picker CSS, follow these steps:
+The jQuery UI Date Picker is a complex and highly configurable plugin. By default, Visual Form Builder's date field will use the default options and configuration.
 
-1. Add this code to your theme's `functions.php` file: `add_filter( 'vfb-date-picker-css', '__return_false' );`
-1. Refer to the [jQuery UI Date Picker documentation on theming](http://jqueryui.com/demos/datepicker/#theming)
+To use the more complex features of the Date Picker plugin, please read these tutorials from the blog:
 
-= How do I change the Date Picker configuration? =
+1. [How to customize the Date Picker](http://matthewmuro.com/2012/02/23/how-to-customize-the-date-picker/)
+1. [Even more Date Picker customizations](http://matthewmuro.com/2012/08/20/even-more-date-picker-customizations/).
 
-The jQuery UI Date Picker is a complex and highly configurable plugin.  By default, Visual Form Builder's date field will use the default options and configuration.
-
-To use the more complex features of the Date Picker plugin, [follow this tutorial](http://matthewmuro.com/2012/02/23/how-to-customize-the-date-picker/).
-
-= How do I translate the field validation text to my language? =
+= How do I translate the error messages to my language? =
 
 The validation messages (ex: 'This field is required' or 'Please enter a valid email address') are generated by the jQuery Form Validation plugin.
 
@@ -182,28 +196,25 @@ Follow these instructions:
 
 In your theme folder, create a JavaScript file. In this example, I'm using `myjs.js`. Add the following code to it and customize the language to what you need:
 
-`jQuery(document).ready(function($) { $.extend($.validator.messages, { required: "Eingabe nötig", email: "Bitte eine gültige E-Mail-Adresse eingeben" }); });`
+`jQuery(document).ready(function($) {
+    $.extend($.validator.messages, {
+        required: "Eingabe nötig",
+        email: "Bitte eine gültige E-Mail-Adresse eingeben"
+    });
+});`
 
 Now, in your functions.php file, add the following piece of code:
 
-`wp_enqueue_script( 'my-visual-form-builder-validation', get_bloginfo( 'template_url' ) . '/myjs.js' , array( 'jquery', 'jquery-form-validation' ), '', true );`
-
-= How do I export my entries to a CSV? =
-
-There are two ways to export your entries to a CSV: Export All or Export Selected.
-
-To Export All:
-
-1. Go to the Export screen
-1. Select the form you would like to export and a date range, if needed
-1. Click Download Export File and save the file
-
-To Export Selected:
-
-1. Go to the Entries screen
-1. Check boxes next to the entries you wish to export
-1. Select the `Export Selected` option under the `Bulk Actions` dropdown
-1. Click Apply and save the file
+`add_action( 'wp_enqueue_scripts', 'my_scripts_method' );
+function my_scripts_method() {
+   wp_register_script( 'my-vfb-validation',
+       get_template_directory_uri() . '/js/my-js.js',
+       array( 'jquery', 'jquery-form-validation' ),
+       '1.0',
+       false );
+     
+   wp_enqueue_script( 'my-vfb-validation' );
+}`
 
 == Screenshots ==
 
@@ -213,6 +224,21 @@ To Export Selected:
 4. Rendered form on a page
 
 == Changelog ==
+
+**Version 2.7**
+
+* Add widget for displaying forms in sidebar
+* Add dashboard widget for displaying recent entries
+* Add DONOTCACHEPAGE constant to fix occasional nonce errors for caching plugin users
+* Fix bug where second address line was always required
+* Fix bug for misnamed Instructions CSS class
+* Fix bug where quotes were not converted on output
+* Fix bug where left/right aligned labels and content were not displaying correctly
+* Fix bug where export AJAX was not returning properly
+* Fix bug for Export Select All fields
+* Sanitize IP address before inserting into database
+* Rollback Date field type to non-HTML5 to prevent duplicate date pickers in Chrome
+* Update language .POT
 
 **Version 2.6.9**
 
@@ -472,6 +498,9 @@ To Export Selected:
 * Plugin launch!
 
 == Upgrade Notice ==
+
+= 2.7 =
+Add sidebar and dashboard widgets. Fix Export bugs.
 
 = 2.6.9 =
 Fix bug where Validation would be removed on saving predefined fields

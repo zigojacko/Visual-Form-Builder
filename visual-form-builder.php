@@ -4,7 +4,7 @@ Plugin Name: Visual Form Builder
 Description: Dynamically build forms using a simple interface. Forms include jQuery validation, a basic logic-based verification system, and entry tracking.
 Author: Matthew Muro
 Author URI: http://matthewmuro.com
-Version: 2.6.9
+Version: 2.7
 */
 
 /*
@@ -82,11 +82,12 @@ class Visual_Form_Builder{
 			// Build options and settings pages.
 			add_action( 'admin_menu', array( &$this, 'add_admin' ) );
 			add_action( 'admin_init', array( &$this, 'save' ) );
+			add_action( 'admin_init', array( &$this, 'additional_plugin_setup' ) );
 			
-			add_action( 'wp_ajax_visual_form_builder_process_sort', array( &$this, 'process_sort_callback' ) );
-			add_action( 'wp_ajax_visual_form_builder_create_field', array( &$this, 'create_field_callback' ) );
-			add_action( 'wp_ajax_visual_form_builder_delete_field', array( &$this, 'delete_field_callback' ) );
-			add_action( 'wp_ajax_visual_form_builder_form_settings', array( &$this, 'form_settings_callback' ) );
+			add_action( 'wp_ajax_visual_form_builder_process_sort', array( &$this, 'ajax_sort_field' ) );
+			add_action( 'wp_ajax_visual_form_builder_create_field', array( &$this, 'ajax_create_field' ) );
+			add_action( 'wp_ajax_visual_form_builder_delete_field', array( &$this, 'ajax_delete_field' ) );
+			add_action( 'wp_ajax_visual_form_builder_form_settings', array( &$this, 'ajax_form_settings' ) );
 			add_action( 'wp_ajax_visual_form_builder_media_button', array( &$this, 'display_media_button' ) );
 			
 			
@@ -94,6 +95,9 @@ class Visual_Form_Builder{
 
 			// Adds additional media button to insert form shortcode
 			add_action( 'media_buttons', array( &$this, 'add_media_button' ), 999 );
+			
+			// Adds a Dashboard widget
+			add_action( 'wp_dashboard_setup', array( &$this, 'add_dashboard_widget' ) );
 			
 			// Load the includes files
 			add_action( 'load-visual-form-builder_page_vfb-entries', array( &$this, 'includes' ) );
@@ -132,6 +136,23 @@ class Visual_Form_Builder{
 		
 		// Add CSS to the front-end
 		add_action( 'wp_enqueue_scripts', array( &$this, 'css' ) );
+	}
+
+	/**
+	 * Allow for additional plugin code to be run during admin_init
+	 * which is not available during the plugin __construct()
+	 * 
+	 * @since 2.7
+	 */
+	public function additional_plugin_setup() {
+			
+		if ( !get_option( 'vfb_dashboard_widget_options' ) ) {
+			$widget_options['vfb_dashboard_recent_entries'] = array(
+				'items' => 5,
+			);
+			update_option( 'vfb_dashboard_widget_options', $widget_options );
+		}
+			
 	}
 	
 	/**
@@ -224,6 +245,92 @@ class Visual_Form_Builder{
 		</div>
 	<?php
 		die(1);
+	}
+	
+	/**
+	 * Adds the dashboard widget
+	 * 
+	 * @since 2.7
+	 */
+	public function add_dashboard_widget() {
+		wp_add_dashboard_widget( 'vfb-dashboard', __( 'Recent Visual Form Builder Entries', 'visual-form-builder' ), array( &$this, 'dashboard_widget' ), array( &$this, 'dashboard_widget_control' ) );
+	}
+	
+	/**
+	 * Displays the dashboard widget content
+	 * 
+	 * @since 2.7
+	 */
+	public function dashboard_widget() {
+		global $wpdb;
+		
+		// Get the date/time format that is saved in the options table
+		$date_format = get_option( 'date_format' );
+		$time_format = get_option( 'time_format' );
+		
+		$widgets = get_option( 'vfb_dashboard_widget_options' );
+		$total_items = isset( $widgets['vfb_dashboard_recent_entries'] ) && isset( $widgets['vfb_dashboard_recent_entries']['items'] ) ? absint( $widgets['vfb_dashboard_recent_entries']['items'] ) : 5;
+		
+		$entries = $wpdb->get_results( $wpdb->prepare( "SELECT forms.form_title, entries.entries_id, entries.form_id, entries.sender_name, entries.sender_email, entries.date_submitted FROM $this->form_table_name AS forms INNER JOIN $this->entries_table_name AS entries ON entries.form_id = forms.form_id ORDER BY entries.date_submitted DESC LIMIT %d", $total_items ) );
+						
+		if ( !$entries ) :
+			echo sprintf(
+				'<p>%1$s <a href="%2$s">%3$s</a>',
+				__( 'You currently do not have any forms.', 'visual-form-builder' ),
+				esc_url( admin_url( 'admin.php?page=vfb-add-new' ) ),
+				__( 'Get started!', 'visual-form-builder' )
+			);
+		else :
+			
+			$content = '';
+			
+			foreach ( $entries as $entry ) :
+				
+				$content .= sprintf(
+					'<li><a href="%1$s">%4$s</a> via <a href="%2$s">%5$s</a> <span class="rss-date">%6$s</span><cite>%3$s</cite></li>',
+					esc_url( add_query_arg( array( 'action' => 'view', 'entry' => absint( $entry->entries_id ) ), admin_url( 'admin.php?page=vfb-entries' ) ) ),
+					esc_url( add_query_arg( 'form-filter', absint( $entry->form_id ), admin_url( 'admin.php?page=vfb-entries' ) ) ),
+					esc_html( $entry->sender_name ),
+					esc_html( $entry->sender_email ),
+					esc_html( $entry->form_title ),
+					date( "$date_format $time_format", strtotime( $entry->date_submitted ) )
+				);
+				
+			endforeach;
+			
+			echo "<div class='rss-widget'><ul>$content</ul></div>";
+		
+		endif;
+	}
+	
+	/**
+	 * Displays the dashboard widget form control
+	 * 
+	 * @since 2.7
+	 */
+	public function dashboard_widget_control() {
+		if ( !$widget_options = get_option( 'vfb_dashboard_widget_options' ) )
+			$widget_options = array();
+	
+		if ( !isset( $widget_options['vfb_dashboard_recent_entries'] ) )
+			$widget_options['vfb_dashboard_recent_entries'] = array();
+	
+		if ( 'POST' == $_SERVER['REQUEST_METHOD'] && isset( $_POST['vfb-widget-recent-entries'] ) ) {
+			$number = absint( $_POST['vfb-widget-recent-entries']['items'] );
+			$widget_options['vfb_dashboard_recent_entries']['items'] = $number;
+			update_option( 'vfb_dashboard_widget_options', $widget_options );
+		}
+	
+		$number = isset( $widget_options['vfb_dashboard_recent_entries']['items'] ) ? (int) $widget_options['vfb_dashboard_recent_entries']['items'] : '';
+	
+		echo sprintf(
+			'<p>
+			<label for="comments-number">%1$s</label>
+			<input id="comments-number" name="vfb-widget-recent-entries[items]" type="text" value="%2$d" size="3" />
+			</p>',
+			__( 'Number of entries to show:', 'visual-form-builder' ),
+			$number
+		);
 	}
 		
 	/**
@@ -421,6 +528,8 @@ class Visual_Form_Builder{
 		<p><?php _e( 'Add forms to your Posts or Pages by locating the icon shown below in the area above your post/page editor.', 'visual-form-builder' ); ?><br>
     		<img src="<?php echo plugins_url( 'visual-form-builder/images/media-button-help.png' ); ?>">
     	</p>
+    	<p><?php _e( 'You may also manually insert the shortcode into a post/page.', 'visual-form-builder' ); ?></p>
+    	<p><?php _e( 'Shortcode', 'visual-form-builder' ); ?> <code>[vfb id='<?php echo (int) $_REQUEST['form']; ?>']</code></p>
 	<?php
 	}	
 	
@@ -531,7 +640,7 @@ class Visual_Form_Builder{
 		wp_enqueue_script( 'jquery-ui-sortable' );
 		wp_enqueue_script( 'postbox' );
 		wp_enqueue_script( 'jquery-form-validation', plugins_url( '/js/jquery.validate.min.js', __FILE__ ), array( 'jquery' ), '1.9.0', true );
-		wp_enqueue_script( 'form-elements-add', plugins_url( "visual-form-builder/js/visual-form-builder$this->load_dev_files.js" ) , array( 'jquery', 'jquery-form-validation' ), '', true );
+		wp_enqueue_script( 'form-elements-add', plugins_url( 'visual-form-builder/js/vfb-admin.js' ) , array( 'jquery', 'jquery-form-validation' ), '', true );
 		wp_enqueue_script( 'nested-sortable', plugins_url( 'visual-form-builder/js/jquery.ui.nestedSortable.js' ) , array( 'jquery', 'jquery-ui-sortable' ), '', true );
 		
 		wp_enqueue_style( 'visual-form-builder-style', plugins_url( "visual-form-builder/css/visual-form-builder-admin.css" ) );
@@ -548,7 +657,7 @@ class Visual_Form_Builder{
 		
 		wp_enqueue_script( 'jquery-form-validation', plugins_url( '/js/jquery.validate.min.js', __FILE__ ), array( 'jquery' ), '1.9.0', true );
 		wp_enqueue_script( 'jquery-ui-datepicker' );
-		wp_enqueue_script( 'visual-form-builder-validation', plugins_url( "visual-form-builder/js/visual-form-builder-validate.js" ) , array( 'jquery', 'jquery-form-validation' ), '', true );
+		wp_enqueue_script( 'visual-form-builder-validation', plugins_url( 'visual-form-builder/js/vfb-validation.js' ) , array( 'jquery', 'jquery-form-validation' ), '', true );
 		wp_enqueue_script( 'visual-form-builder-metadata', plugins_url( 'visual-form-builder/js/jquery.metadata.js' ) , array( 'jquery', 'jquery-form-validation' ), '', true );
 	}
 	
@@ -953,7 +1062,7 @@ class Visual_Form_Builder{
 	 * 
 	 * @since 1.0
 	 */
-	public function process_sort_callback() {
+	public function ajax_sort_field() {
 		global $wpdb;
 		
 		$data = array();
@@ -971,6 +1080,8 @@ class Visual_Form_Builder{
 			// Update each field with it's new sequence and parent ID
 			$wpdb->update( $this->field_table_name, array( 'field_sequence' => $k, 'field_parent' => $v['parent'] ), array( 'field_id' => $v['field_id'] ) );
 		}
+		
+		return;
 
 		die(1);
 	}
@@ -980,7 +1091,7 @@ class Visual_Form_Builder{
 	 * 
 	 * @since 1.9
 	 */
-	public function create_field_callback() {
+	public function ajax_create_field() {
 		global $wpdb;
 		
 		$data = array();
@@ -1074,7 +1185,7 @@ class Visual_Form_Builder{
 	 * 
 	 * @since 1.9
 	 */
-	public function delete_field_callback() {
+	public function ajax_delete_field() {
 		global $wpdb;
 
 		if ( isset( $_REQUEST['page'] ) && $_REQUEST['page'] == 'toplevel_page_visual-form-builder' && isset( $_REQUEST['action'] ) && $_REQUEST['action'] == 'visual_form_builder_delete_field' ) {
@@ -1104,7 +1215,7 @@ class Visual_Form_Builder{
 	 * 
 	 * @since 2.2
 	 */
-	public function form_settings_callback() {
+	public function ajax_form_settings() {
 		global $current_user;
 		get_currentuserinfo();
 		
@@ -1777,7 +1888,7 @@ class Visual_Form_Builder{
 		
 		$form_id = ( isset( $_REQUEST['form_id'] ) ) ? (int) esc_html( $_REQUEST['form_id'] ) : '';
 		
-		if ( isset( $_REQUEST['visual-form-builder-submit'] ) && wp_verify_nonce( $_REQUEST['_wpnonce'], 'visual-form-builder-nonce' ) ) {
+		if ( isset( $_REQUEST['visual-form-builder-submit'] ) ) {
 			// Get forms
 			$order = sanitize_sql_orderby( 'form_id DESC' );
 			$forms 	= $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $this->form_table_name WHERE form_id = %d ORDER BY $order", $form_id ) );
@@ -1932,6 +2043,9 @@ class Visual_Form_Builder{
 
 // On plugin activation, install the databases and add/update the DB version
 register_activation_hook( __FILE__, array( 'Visual_Form_Builder', 'install_db' ) );
+
+// The VFB widget
+require( trailingslashit( plugin_dir_path( __FILE__ ) ) . 'includes/class-widget.php' );
 
 // Special case to load Export class so AJAX is registered
 require_once( trailingslashit( plugin_dir_path( __FILE__ ) ) . 'includes/class-export.php' );

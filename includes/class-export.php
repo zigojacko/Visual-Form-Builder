@@ -30,7 +30,7 @@ class VisualFormBuilder_Export {
 		
 		// AJAX for loading new entry checkboxes
 		add_action( 'wp_ajax_visual_form_builder_export_load_options', array( &$this, 'ajax_load_options' ) );
-			
+		
 		$this->process_export_action();
 	}
 	
@@ -123,7 +123,20 @@ class VisualFormBuilder_Export {
 						
 						echo '<div id="vfb-export-entries-fields">';
 						
-						$this->build_options( $data );
+						$array = array();
+						foreach ( $data as $row ) :
+							$array = array_merge( $row, $array );
+						endforeach;
+						
+						$array = array_keys( $array );
+						$array = array_values( array_merge( $this->default_cols, $array ) );
+						$array = array_map( 'stripslashes', $array );
+						
+						foreach ( $array as $k => $v ) :
+							$selected = ( in_array( $v, $this->default_cols ) ) ? ' checked="checked"' : '';
+							
+							echo sprintf( '<label for="vfb-display-entries-val-%1$d"><input name="entries_columns[]" class="vfb-display-entries-vals" id="vfb-display-entries-val-%1$d" type="checkbox" value="%2$s" %3$s> %4$s</label><br>', $k, $v, $selected, $v );
+						endforeach;
 						
 						echo '</div>';
 						
@@ -335,7 +348,7 @@ class VisualFormBuilder_Export {
 		
 		// Return nothing if no entries found
 		if ( !$entries ) {
-			echo __( 'No entries to pull field names from.', 'vfb_pro_display_entries' );
+			echo __( 'No entries to pull field names from.', 'visual-form-builder' );
 			wp_die();
 		}
 		
@@ -345,28 +358,22 @@ class VisualFormBuilder_Export {
 		// Get JSON data
 		$data = json_decode( $columns, true );
 		
-		$this->build_options( $data );
-		
-		wp_die();
-	}
-	
-	public function build_options( $data ) {
-		
 		$array = array();
 		foreach ( $data as $row ) :
 			$array = array_merge( $row, $array );
 		endforeach;
 		
 		$array = array_keys( $array );
-		$array = array_values( array_merge( $this->default_cols, $array ) );
+		$array = array_values( array_merge( $export->default_cols, $array ) );
 		$array = array_map( 'stripslashes', $array );
 		
 		foreach ( $array as $k => $v ) :
-			$selected = ( in_array( $v, $this->default_cols ) ) ? ' checked="checked"' : '';
+			$selected = ( in_array( $v, $export->default_cols ) ) ? ' checked="checked"' : '';
 			
-			echo sprintf( '<label for="vfb-display-entries-val-%1$d"><input name="entries_columns[]" class="vfb-display-entries-vals" id="vfb-display-entries-val-%1$d" type="checkbox" value="%2$s" %3$s> %2$s</label><br>', $k, $v, $selected );
+			echo sprintf( '<label for="vfb-display-entries-val-%1$d"><input name="entries_columns[]" class="vfb-display-entries-vals" id="vfb-display-entries-val-%1$d" type="checkbox" value="%2$s" %3$s> %4$s</label><br>', $k, $v, $selected, $v );
 		endforeach;
 		
+		wp_die();
 	}
 		
 	/**
