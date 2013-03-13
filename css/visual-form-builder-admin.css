@@ -547,12 +547,12 @@ label.error {
     border-color: red;
     color: #8a1f11;
 }
-ul#menu-to-edit ul {
+ul#vfb-menu-to-edit ul {
     margin: 0 0 0 25px;
     padding: 0;
     list-style-type: none;
     width: 98%}
-#menu-to-edit {
+#vfb-menu-to-edit {
     margin-top: 0;
     padding: 1em 0;
 }

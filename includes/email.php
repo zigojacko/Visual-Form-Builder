@@ -87,7 +87,8 @@ if ( isset( $_REQUEST['visual-form-builder-submit'] ) ) :
 	$header = $body = $message = $footer = $html_email = $auto_response_email = $attachments = '';
 	
 	// Prepare the beginning of the content
-	$header = '<html>
+	$header = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+				<html>
 				<head>
 				<meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
 				<title>HTML Email</title>
@@ -95,12 +96,12 @@ if ( isset( $_REQUEST['visual-form-builder-submit'] ) ) :
 				<body><table rules="all" style="border-color: #666;" cellpadding="10">' . "\n";
 	
 	// Loop through each form field and build the body of the message
-	foreach ( $fields as $field ) {
+	foreach ( $fields as $field ) :
 		// Handle attachments
-		if ( $field->field_type == 'file-upload' ) {
+		if ( $field->field_type == 'file-upload' ) :
 			$value = ( isset( $_FILES[ 'vfb-' . $field->field_id ] ) ) ? $_FILES[ 'vfb-' . $field->field_id ] : '';
 			
-			if ( $value['size'] > 0 ) {
+			if ( $value['size'] > 0 ) :
 				// 25MB is the max size allowed
 				$size = apply_filters( 'vfb_max_file_size', 25 );
 				$max_attach_size = $size * 1048576;
@@ -119,7 +120,7 @@ if ( isset( $_REQUEST['visual-form-builder-submit'] ) ) :
 				$uploaded_file = wp_handle_upload( $value, $upload_overrides );
 				
 				// If the wp_handle_upload call returned a local path for the image
-				if ( isset( $uploaded_file['file'] ) ) {
+				if ( isset( $uploaded_file['file'] ) ) :
 					// Retrieve the file type from the file name. Returns an array with extension and mime type
 					$wp_filetype = wp_check_filetype( basename( $uploaded_file['file'] ), null );
 					
@@ -158,61 +159,37 @@ if ( isset( $_REQUEST['visual-form-builder-submit'] ) ) :
 						'value' 	=> $uploaded_file['url']
 					);
 					
-					$body .= '<tr><td><strong>' . stripslashes( $field->field_name ) . ': </strong></td><td><a href="' . $uploaded_file['url'] . '">' . $uploaded_file['url'] . '</a></td></tr>' . "\n";
-				}
-			}
-			else {
+					$body .= sprintf(
+						'<tr>
+						<td><strong>%1$s: </strong></td>
+						<td><a href="%2$s">%2$s</a></td>
+						</tr>' . "\n",
+						stripslashes( $field->field_name ),
+						$uploaded_file['url']
+					);
+				endif;
+			else :
 				$value = ( isset( $_POST[ 'vfb-' . $field->field_id ] ) ) ? $_POST[ 'vfb-' . $field->field_id ] : '';
-				$body .= '<tr><td><strong>' . stripslashes( $field->field_name ) . ': </strong></td><td>' . $value . '</td></tr>' . "\n";
-			}
-		}
+				$body .= sprintf(
+					'<tr>
+					<td><strong>%1$s: </strong></td>
+					<td>%2$s</td>
+					</tr>' . "\n",
+					stripslashes( $field->field_name ),
+					$value
+				);
+			endif;
+		
 		// Everything else
-		else {
+		else :
 			$value = ( isset( $_POST[ 'vfb-' . $field->field_id ] ) ) ? $_POST[ 'vfb-' . $field->field_id ] : '';
 			
 			// If time field, build proper output
 			if ( is_array( $value ) && $field->field_type == 'time' )
-				$value = ( array_key_exists( 'ampm', $value ) ) ? substr_replace( implode( ':', $value ), ' ', 5, 1 ) : implode( ':', $value );
+				$value = $this->build_array_form_item( $value, $field->field_type );
 			// If address field, build proper output
-			elseif ( is_array( $value ) && $field->field_type == 'address' ) {
-				$address = '';
-				
-				if ( !empty( $value['address'] ) )
-					$address .= $value['address'];
-				
-				if ( !empty( $value['address-2'] ) ) {
-					if ( !empty( $address ) )
-						$address .= '<br>';
-					$address .= $value['address-2'];
-				}
-				
-				if ( !empty( $value['city'] ) ) {
-					if ( !empty( $address ) )
-						$address .= '<br>';
-					$address .= $value['city'];
-				}
-				if ( !empty( $value['state'] ) ) {
-					if ( !empty( $address ) && empty( $value['city'] ) )
-						$address .= '<br>';
-					elseif ( !empty( $address ) && !empty( $value['city'] ) )
-						$address .= ', ';
-					$address .= $value['state'];
-				}
-				if ( !empty( $value['zip'] ) ) {
-					if ( !empty( $address ) && ( empty( $value['city'] ) && empty( $value['state'] ) ) )
-						$address .= '<br>';
-					elseif ( !empty( $address ) && ( !empty( $value['city'] ) || !empty( $value['state'] ) ) )
-						$address .= ' ';
-					$address .= $value['zip'];
-				}
-				if ( !empty( $value['country'] ) ) {
-					if ( !empty( $address ) )
-						$address .= '<br>';
-					$address .= $value['country'];
-				}
-				
-				$value = html_entity_decode( stripslashes( esc_html( $address ) ), ENT_QUOTES, 'UTF-8' );
-			}
+			elseif ( is_array( $value ) && $field->field_type == 'address' )
+				$value = $this->build_array_form_item( $value, $field->field_type );
 			// If multiple values, build the list
 			elseif ( is_array( $value ) )
 				$value = esc_html( implode( ', ', $value ) );
@@ -238,18 +215,35 @@ if ( isset( $_REQUEST['visual-form-builder-submit'] ) ) :
 			// Validate input
 			$this->validate_input( $value, $field->field_name, $field->field_type, $field->field_required );
 			
-			if ( ! in_array( $field->field_type, array( 'verification', 'secret', 'submit' ) ) ) {
-				if ( $field->field_type == 'fieldset' )
-					$body .= '<tr style="background-color:#393E40;color:white;font-size:14px;"><td colspan="2">' . stripslashes( $field->field_name ) . '</td></tr>' . "\n";
-				elseif ( $field->field_type == 'section' )
-					$body .= '<tr style="background-color:#6E7273;color:white;font-size:14px;"><td colspan="2">' . stripslashes( $field->field_name ) . '</td></tr>' . "\n";
-				else {
+			if ( ! in_array( $field->field_type, array( 'verification', 'secret', 'submit' ) ) ) :
+				if ( $field->field_type == 'fieldset' ) :
+					$body .= sprintf(
+						'<tr style="background-color:#393E40;color:white;font-size:14px;">
+						<td colspan="2">%1$s</td>
+						</tr>' . "\n",
+						stripslashes( $field->field_name )
+					);
+				elseif ( $field->field_type == 'section' ) :
+					$body .= sprintf(
+						'<tr style="background-color:#6E7273;color:white;font-size:14px;">
+						<td colspan="2">%1$s</td>
+						</tr>' . "\n",
+						stripslashes( $field->field_name )
+					);
+				else :
 					// Convert new lines to break tags for textarea in html
 					$display_value = ( 'textarea' == $field->field_type ) ? nl2br( $value ) : $value;
 					
-					$body .= '<tr><td><strong>' . stripslashes( $field->field_name ) . ': </strong></td><td>' . $display_value . '</td></tr>' . "\n";
-				}
-			}
+					$body .= sprintf(
+						'<tr>
+						<td><strong>%1$s: </strong></td>
+						<td>%2$s</td>
+						</tr>' . "\n",
+						stripslashes( $field->field_name ),
+						$display_value
+					);
+				endif;
+			endif;
 		
 			$data[] = array(
 				'id' 		=> $field->field_id,
@@ -260,12 +254,13 @@ if ( isset( $_REQUEST['visual-form-builder-submit'] ) ) :
 				'parent_id' => $field->field_parent,
 				'value' 	=> esc_html( $value )
 			);
-		}
+		
+		endif;
 		
 		// If the user accumulates more than 4 points, it might be spam
 		if ( $points > 4 )
 			wp_die( __( 'Your responses look too much like spam and could not be sent at this time.', 'visual-form-builder' ), '', array( 'back_link' => true ) );
-	}
+	endforeach;
 	
 	// Setup our entries data
 	$entry = array(
@@ -283,7 +278,14 @@ if ( isset( $_REQUEST['visual-form-builder-submit'] ) ) :
 	$wpdb->insert( $this->entries_table_name, $entry );
 
 	// Close out the content
-	$footer .= '<tr><td class="footer" height="61" align="left" valign="middle" colspan="2"><p style="font-size: 12px; font-weight: normal; margin: 0; line-height: 16px; padding: 0;">This email was built and sent using <a href="http://wordpress.org/extend/plugins/visual-form-builder/" style="font-size: 12px;">Visual Form Builder</a>.</p></td></tr></table></body></html>' . "\n";
+	$footer .= '<tr>
+	<td class="footer" height="61" align="left" valign="middle" colspan="2">
+	<p style="font-size: 12px; font-weight: normal; margin: 0; line-height: 16px; padding: 0;">This email was built and sent using <a href="http://wordpress.org/extend/plugins/visual-form-builder/" style="font-size: 12px;">Visual Form Builder</a>.</p>
+	</td>
+	</tr>
+	</table>
+	</body>
+	</html>' . "\n";
 	
 	// Build complete HTML email
 	$message = $header . $body . $footer;
@@ -303,7 +305,7 @@ if ( isset( $_REQUEST['visual-form-builder-submit'] ) ) :
 	if ( $form_settings->form_notification_entry !== '' )
 		$auto_response_email = $header . $notify_message . $body . $footer;
 	else
-		$auto_response_email = $header . '<table cellspacing="0" border="0" cellpadding="0" width="100%"><tr><td colspan="2" class="mainbar" align="left" valign="top" width="600">' . $notify_message . '</td></tr>' . $footer;
+		$auto_response_email = sprintf( '%1$s<table cellspacing="0" border="0" cellpadding="0" width="100%%"><tr><td colspan="2" class="mainbar" align="left" valign="top" width="600">%2$s</td></tr>%3$s', $header, $notify_message, $footer );
 	
 	
 	// Build email headers			
@@ -326,9 +328,15 @@ if ( isset( $_REQUEST['visual-form-builder-submit'] ) ) :
 	$reply_to 	= "\"$header_from_name\" <$header_from>";
 	$headers = "Sender: $from_email\r\n" . "From: $reply_to\r\n" . "Reply-To: $reply_to\r\n" . "Content-Type: $header_content_type; charset=\"" . get_option('blog_charset') . "\"\r\n";
 	
+	$form_subject 	= wp_specialchars_decode( $form_settings->form_subject, ENT_QUOTES );
+	$notify_subject = wp_specialchars_decode( $form_settings->form_notification_subject, ENT_QUOTES );
+
+	// Sanitize main emails_to
+	$emails_to = array_map( 'sanitize_email', $form_settings->form_to );
+
 	// Send the mail
-	foreach ( $form_settings->form_to as $email ) {
-		wp_mail( $email, wp_specialchars_decode( $form_settings->form_subject, ENT_QUOTES ), $message, $headers, $attachments );
+	foreach ( $emails_to as $email ) {
+		wp_mail( $email, $form_subject, $message, $headers, $attachments );
 	}
 	
 	// Send auto-responder email
@@ -343,7 +351,7 @@ if ( isset( $_REQUEST['visual-form-builder-submit'] ) ) :
 		$headers = "Sender: $from_email\r\n" . "From: $reply_to\r\n" . "Reply-To: $reply_to\r\n" . "Content-Type: $header_content_type; charset=\"" . get_option('blog_charset') . "\"\r\n";
 		
 		// Send the mail
-		wp_mail( $copy_email, wp_specialchars_decode( $form_settings->form_notification_subject, ENT_QUOTES ), $auto_response_email, $headers, $attachments );
+		wp_mail( $copy_email, $notify_subject, $auto_response_email, $headers, $attachments );
 		
 	endif;
 	
