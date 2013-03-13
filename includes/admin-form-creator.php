@@ -1,43 +1,35 @@
 <?php
-
-$action = ( isset( $_REQUEST['form'] ) && $_REQUEST['form'] !== '0' ) ? 'update_form' : 'create_form';
-
 $order = sanitize_sql_orderby( 'form_id DESC' );
-$forms = $wpdb->get_results( "SELECT * FROM $this->form_table_name ORDER BY $order" );
+$form = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $this->form_table_name WHERE form_id = %d ORDER BY $order", $form_nav_selected_id ) );
 
-// Loop through each for and build the tabs
-foreach ( $forms as $form ) {
-	
-	// Control selected tab
-	if ( $form_nav_selected_id == $form->form_id ) :
-		$form_id 					= $form->form_id;
-		$form_title 				= stripslashes( $form->form_title );
-		$form_subject 				= stripslashes( $form->form_email_subject );
-		$form_email_from_name 		= stripslashes( $form->form_email_from_name );
-		$form_email_from 			= stripslashes( $form->form_email_from);
-		$form_email_from_override 	= stripslashes( $form->form_email_from_override);
-		$form_email_from_name_override = stripslashes( $form->form_email_from_name_override);
-		$form_email_to = ( is_array( unserialize( $form->form_email_to ) ) ) ? unserialize( $form->form_email_to ) : explode( ',', unserialize( $form->form_email_to ) );
-		$form_success_type 			= stripslashes( $form->form_success_type );
-		$form_success_message 		= stripslashes( $form->form_success_message );
-		$form_notification_setting 	= stripslashes( $form->form_notification_setting );
-		$form_notification_email_name = stripslashes( $form->form_notification_email_name );
-		$form_notification_email_from = stripslashes( $form->form_notification_email_from );
-		$form_notification_email 	= stripslashes( $form->form_notification_email );
-		$form_notification_subject 	= stripslashes( $form->form_notification_subject );
-		$form_notification_message 	= stripslashes( $form->form_notification_message );
-		$form_notification_entry 	= stripslashes( $form->form_notification_entry );
-				
-		$form_label_alignment 		= stripslashes( $form->form_label_alignment );
+if ( !$form || $form->form_id !== $form_nav_selected_id )
+	wp_die( 'You must select a form' );
 
-		// Only show required text fields for the sender name override
-		$senders = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $this->field_table_name WHERE form_id = %d AND field_type='text' AND field_validation = '' AND field_required = 'yes'", $form_nav_selected_id ) );
+$form_id 					= $form->form_id;
+$form_title 				= stripslashes( $form->form_title );
+$form_subject 				= stripslashes( $form->form_email_subject );
+$form_email_from_name 		= stripslashes( $form->form_email_from_name );
+$form_email_from 			= stripslashes( $form->form_email_from);
+$form_email_from_override 	= stripslashes( $form->form_email_from_override);
+$form_email_from_name_override = stripslashes( $form->form_email_from_name_override);
+$form_email_to = ( is_array( unserialize( $form->form_email_to ) ) ) ? unserialize( $form->form_email_to ) : explode( ',', unserialize( $form->form_email_to ) );
+$form_success_type 			= stripslashes( $form->form_success_type );
+$form_success_message 		= stripslashes( $form->form_success_message );
+$form_notification_setting 	= stripslashes( $form->form_notification_setting );
+$form_notification_email_name = stripslashes( $form->form_notification_email_name );
+$form_notification_email_from = stripslashes( $form->form_notification_email_from );
+$form_notification_email 	= stripslashes( $form->form_notification_email );
+$form_notification_subject 	= stripslashes( $form->form_notification_subject );
+$form_notification_message 	= stripslashes( $form->form_notification_message );
+$form_notification_entry 	= stripslashes( $form->form_notification_entry );
 		
-		// Only show required email fields for the email override
-		$emails = $wpdb->get_results( "SELECT * FROM $this->field_table_name WHERE (form_id = $form_nav_selected_id AND field_type='text' AND field_validation = 'email' AND field_required = 'yes') OR (form_id = $form_nav_selected_id AND field_type='email' AND field_validation = 'email' AND field_required = 'yes')" );
+$form_label_alignment 		= stripslashes( $form->form_label_alignment );
 
-	endif;
-}
+// Only show required text fields for the sender name override
+$senders = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $this->field_table_name WHERE form_id = %d AND field_type IN( 'text', 'name' ) AND field_validation = '' AND field_required = 'yes'", $form_nav_selected_id ) );
+
+// Only show required email fields for the email override
+$emails = $wpdb->get_results( "SELECT * FROM $this->field_table_name WHERE (form_id = $form_nav_selected_id AND field_type='text' AND field_validation = 'email' AND field_required = 'yes') OR (form_id = $form_nav_selected_id AND field_type='email' AND field_validation = 'email' AND field_required = 'yes')" );
 
 $screen = get_current_screen();
 $class = 'columns-' . get_current_screen()->get_columns();
@@ -59,9 +51,9 @@ $class = 'columns-' . get_current_screen()->get_columns();
 	        <div id="vfb-form-builder-management">
 	            <div class="form-edit">
 			        <form method="post" id="visual-form-builder-update" action="">
-	                	<input name="action" type="hidden" value="<?php echo $action; ?>" />
+	                	<input name="action" type="hidden" value="update_form" />
 						<input name="form_id" type="hidden" value="<?php echo $form_nav_selected_id; ?>" />
-	                    <?php wp_nonce_field( "$action-$form_nav_selected_id" ); ?>
+	                    <?php wp_nonce_field( 'vfb_update_form' ); ?>
 	                	<div id="form-editor-header">
 	                    	<div id="submitpost" class="submitbox">
 	                        	<div class="vfb-major-publishing-actions">
@@ -154,14 +146,18 @@ $class = 'columns-' . get_current_screen()->get_columns();
 		                                            	<?php _e( "User's Name (optional)" , 'visual-form-builder'); ?>
 		                                                <span class="vfb-tooltip" title="About User's Name" rel="Select a required text field from your form to use as the From display name in the email.">(?)</span>
 		                        						<br />
+		                                            <?php if ( empty( $emails ) ) : ?>
+		                                            <span><?php _e( 'No required text fields detected', 'visual-form-builder' ); ?></span>
+		                                            <?php else : ?>
 		                                            <select name="form_email_from_name_override" id="form_email_from_name_override" class="widefat">
-		                                                <option value="" <?php selected( $form_email_from_name_override, '' ); ?>><?php _e( 'Select a required text field' , 'visual-form-builder'); ?></option>
+		                                                <option value="" <?php selected( $form_email_from_name_override, '' ); ?>></option>
 		                                                <?php 
 		                                                foreach( $senders as $sender ) {
 		                                                    echo '<option value="' . $sender->field_id . '"' . selected( $form_email_from_name_override, $sender->field_id ) . '>' . stripslashes( $sender->field_name ) . '</option>';
 		                                                }
 		                                                ?>
 		                                            </select>
+		                                            <?php endif; ?>
 		                                            </label>
 		                                        </p>
 		                                        <br class="clear" />
@@ -180,14 +176,18 @@ $class = 'columns-' . get_current_screen()->get_columns();
 		                                            	<?php _e( "User's E-mail (optional)" , 'visual-form-builder'); ?>
 		                                                <span class="vfb-tooltip" title="About User's Email" rel="Select a required email field from your form to use as the Reply-To email.">(?)</span>
 		                        						<br />
+		                                            <?php if ( empty( $emails ) ) : ?>
+		                                            <span><?php _e( 'No required email fields detected', 'visual-form-builder' ); ?></span>
+		                                            <?php else : ?>
 		                                            <select name="form_email_from_override" id="form_email_from_override" class="widefat">
-		                                                <option value="" <?php selected( $form_email_from_override, '' ); ?>><?php _e( 'Select a required email field' , 'visual-form-builder'); ?></option>
+		                                                <option value="" <?php selected( $form_email_from_override, '' ); ?>></option>
 		                                                <?php 
 		                                                foreach( $emails as $email ) {
 		                                                    echo '<option value="' . $email->field_id . '"' . selected( $form_email_from_override, $email->field_id ) . '>' . stripslashes( $email->field_name ) . '</option>';
 		                                                }
 		                                                ?>
 		                                            </select>
+		                                            <?php endif; ?>
 		                                            </label>
 		                                        </p>
 		                                        <br class="clear" />
@@ -296,14 +296,18 @@ $class = 'columns-' . get_current_screen()->get_columns();
 		                                                    <?php _e( 'E-mail To' , 'visual-form-builder'); ?>
 		                                                    <span class="vfb-tooltip" title="About E-mail To" rel="Select a required email field from your form to send the notification email to.">(?)</span>
 		                        							<br />
+		                                                    <?php if ( empty( $emails ) ) : ?>
+				                                            <span><?php _e( 'No required email fields detected', 'visual-form-builder' ); ?></span>
+				                                            <?php else : ?>
 		                                                    <select name="form_notification_email" id="form-notification-email" class="widefat">
-		                                                        <option value="" <?php selected( $form_notification_email, '' ); ?>><?php _e( 'Select a required email field' , 'visual-form-builder'); ?></option>
+		                                                        <option value="" <?php selected( $form_notification_email, '' ); ?>></option>
 		                                                        <?php 
 		                                                        foreach( $emails as $email ) {
 		                                                            echo '<option value="' . $email->field_id . '"' . selected( $form_notification_email, $email->field_id ) . '>' . $email->field_name . '</option>';
 		                                                        }
 		                                                        ?>
 		                                                    </select>
+		                                                    <?php endif; ?>
 		                                                </label>
 		                                            </p>
 		                                            <br class="clear" />
@@ -334,7 +338,7 @@ $class = 'columns-' . get_current_screen()->get_columns();
 	                                <?php endif; ?>
 	
 	                                <div class="publishing-action">
-                                    	<input type="submit" value="<?php echo __( 'Save Form' , 'visual-form-builder'); ?>" class="button-primary menu-save" id="save_form" name="save_form" />
+                                    	<?php submit_button( __( 'Save Form', 'visual-form-builder' ), 'primary', 'save_form', false ); ?>
 	                                </div>
 	                            </div>
 	                        </div>
@@ -343,7 +347,7 @@ $class = 'columns-' . get_current_screen()->get_columns();
 	                        <div id="post-body-content">
 		                    <div id="vfb-fieldset-first-warning" class="error"><?php printf( '<p><strong>%1$s </strong><br>%2$s</p>', __( 'Warning &mdash; Missing Fieldset', 'visual-form-builder-pro' ), __( 'Your form may not function or display correctly. Please be sure to add or move a Fieldset to the beginning of your form.' , 'visual-form-builder-pro') ); ?></div>
 	                        <!-- !Field Items output -->
-							<ul id="menu-to-edit" class="menu ui-sortable droppable">
+							<ul id="vfb-menu-to-edit" class="menu ui-sortable droppable">
 							<?php echo $this->field_output( $form_nav_selected_id ); ?>
 							</ul>
 	                        </div>
@@ -353,7 +357,7 @@ $class = 'columns-' . get_current_screen()->get_columns();
 	                    <div id="form-editor-footer">
 	                    	<div class="vfb-major-publishing-actions">
 	                            <div class="publishing-action">
-	                            	<input type="submit" value="<?php _e( 'Save Form' , 'visual-form-builder'); ?>" class="button-primary menu-save" id="save_form" name="save_form" />
+	                            	<?php submit_button( __( 'Save Form', 'visual-form-builder' ), 'primary', 'save_form', false ); ?>
 	                            </div> <!-- .publishing-action -->
 	                        </div> <!-- .vfb-major-publishing-actions -->
 	                    </div> <!-- #form-editor-footer -->
