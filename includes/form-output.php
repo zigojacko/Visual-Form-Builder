@@ -3,7 +3,7 @@
 if ( !defined( 'DONOTCACHEPAGE' ) )
 	define( 'DONOTCACHEPAGE', true );
 
-global $wpdb, $wp;
+global $wpdb;
 
 // Extract shortcode attributes, set defaults
 extract( shortcode_atts( array(
@@ -43,7 +43,7 @@ $submit = 'Submit';
 $verification = '';
 
 // Current URL
-$current_url = home_url( add_query_arg( array(), $wp->request ) );
+$current_url = 'http'. ( empty( $_SERVER['HTTPS'] ) ? '' : 's' ) . '://' . $_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI'];
 
 $label_alignment = ( $form->form_label_alignment !== '' ) ? " $form->form_label_alignment" : '';
 $output = '<div class="visual-form-builder-container"><form id="' . $form->form_key . '" class="visual-form-builder' . $label_alignment . '" method="post" 46="multipart/form-data">
@@ -573,7 +573,7 @@ $output .= sprintf(
 	$submit
 );
 
-$output .= sprintf( '<input type="hidden" name="vfb_referral_url" value="%s">', untrailingslashit( $current_url ) );
+$output .= sprintf( '<input type="hidden" name="vfb_referral_url" value="%s">', $current_url );
 
 // Close the form out
 $output .= '</form>';

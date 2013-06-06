@@ -4,8 +4,8 @@ global $wpdb, $post;
 $required 		= ( isset( $_REQUEST['_vfb-required-secret'] ) && $_REQUEST['_vfb-required-secret'] == '0' ) ? false : true;
 $secret_field 	= ( isset( $_REQUEST['_vfb-secret'] ) ) ? $_REQUEST['_vfb-secret'] : '';
 $honeypot 		= ( isset( $_REQUEST['vfb-spam'] ) ) ? $_REQUEST['vfb-spam'] : '';
-$referrer = ( isset( $_REQUEST['vfb_referral_url'] ) ) ? esc_url( stripslashes( $_REQUEST['vfb_referral_url'] ) ) : false;
-$wp_get_referer = untrailingslashit( wp_get_referer() );
+$referrer = ( isset( $_REQUEST['vfb_referral_url'] ) ) ? $_REQUEST['vfb_referral_url'] : false;
+$wp_get_referer = wp_get_referer();
 
 // If the verification is set to required, run validation check
 if ( true == $required && !empty( $secret_field ) ) {
