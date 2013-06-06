@@ -1,10 +1,4 @@
 <?php
-
-// Include the wp_list_table class if running <WP 3.1
-if( !class_exists( 'WP_List_Table' ) ) {
-    require_once( ABSPATH . 'wp-admin/includes/class-wp-list-table.php' );
-}
-
 /**
  * Class that builds our Entries table
  * 
@@ -60,10 +54,15 @@ class VisualFormBuilder_Entries_List extends WP_List_Table {
 	function column_form( $item ){
 		 
 		// Build row actions
-		$actions = array(
-			'view' 		=> sprintf( '<a href="?page=%s&action=%s&entry=%s" id="%3$s" class="view-entry">View</a>', $_REQUEST['page'], 'view', $item['entry_id'] ),
-			'delete' 	=> sprintf( '<a href="?page=%s&action=%s&entry=%s">Delete</a>', $_REQUEST['page'], 'delete', $item['entry_id'] )
-		);
+		if ( !$this->get_entry_status() || 'all' == $this->get_entry_status() )
+			$actions['view'] = sprintf( '<a href="?page=%s&action=%s&entry=%s" id="%3$s" class="view-entry">View</a>', $_REQUEST['page'], 'view', $item['entry_id'] );
+		
+		if ( !$this->get_entry_status() || 'all' == $this->get_entry_status() )
+			$actions['trash'] = sprintf( '<a href="?page=%s&action=%s&entry=%s">Trash</a>', $_REQUEST['page'], 'trash', $item['entry_id'] );
+		elseif ( $this->get_entry_status() && 'trash' == $this->get_entry_status() ) {
+			$actions['restore'] = sprintf( '<a href="?page=%s&action=%s&entry=%s">%s</a>', $_REQUEST['page'], 'restore', $item['entry_id'], __( 'Restore', 'visual-form-builder' ) );
+			$actions['delete'] = sprintf( '<a href="?page=%s&action=%s&entry=%s">%s</a>', $_REQUEST['page'], 'delete', $item['entry_id'], __( 'Delete Permanently', 'visual-form-builder' ) );
+		}
 	
 		return sprintf( '%1$s %2$s', $item['form'], $this->row_actions( $actions ) );
 	}
@@ -141,10 +140,97 @@ class VisualFormBuilder_Entries_List extends WP_List_Table {
 			$where .= " AND YEAR(date_submitted) = $year AND MONTH(date_submitted) = $month";
 		}
 
+		// Entries type filter
+		$where .= ( $this->get_entry_status() && 'all' !== $this->get_entry_status() ) ? $wpdb->prepare( ' AND entries.entry_approved = %s', $this->get_entry_status() ) : '';
+
 		$sql_order = sanitize_sql_orderby( "$order_col $order" );
 		$cols = $wpdb->get_results( "SELECT forms.form_title, entries.entries_id, entries.form_id, entries.subject, entries.sender_name, entries.sender_email, entries.emails_to, entries.date_submitted, entries.ip_address FROM $this->form_table_name AS forms INNER JOIN $this->entries_table_name AS entries ON entries.form_id = forms.form_id WHERE 1=1 $where $search ORDER BY $sql_order LIMIT $per_page $offset" );
 		
 		return $cols;
+	}
+
+	/**
+	 * Get the entry status: All, Spam, or Trash
+	 * 
+	 * @since 2.1
+	 * @returns string Entry status
+	 */
+	function get_entry_status() {
+		if ( !isset( $_REQUEST['entry_status'] ) )
+			return false;
+		
+		return esc_html( $_REQUEST['entry_status'] );
+	}
+
+	/**
+	 * Build the different views for the entries screen
+	 * 
+	 * @since 2.1
+	 * @returns array $status_links Status links with counts
+	 */
+	function get_views() {
+		$status_links = array();
+		$num_entries = $this->get_entries_count();
+		$class = '';
+		$link = '?page=vfb-entries';
+		
+		$stati = array(
+			'all'    => _n_noop( 'All <span class="count">(<span class="pending-count">%s</span>)</span>', 'All <span class="count">(<span class="pending-count">%s</span>)</span>' ),
+			'trash'  => _n_noop( 'Trash <span class="count">(<span class="trash-count">%s</span>)</span>', 'Trash <span class="count">(<span class="trash-count">%s</span>)</span>' )
+		);
+		
+		$total_entries = (int) $num_entries->all;
+		$entry_status = isset( $_REQUEST['entry_status'] ) ? $_REQUEST['entry_status'] : 'all';
+		
+		foreach ( $stati as $status => $label ) {
+			$class = ( $status == $entry_status ) ? ' class="current"' : '';
+			
+			if ( !isset( $num_entries->$status ) )
+				$num_entries->$status = 10;
+				
+			$link = add_query_arg( 'entry_status', $status, $link );			
+			
+			$status_links[ $status ] = "<li class='$status'><a href='$link'$class>" . sprintf(
+				translate_nooped_plural( $label, $num_entries->$status ),
+				number_format_i18n( $num_entries->$status )
+			) . '</a>';
+		}
+		
+		return $status_links;
+	}
+
+	/**
+	 * Get the number of entries for use with entry statuses
+	 * 
+	 * @since 2.1
+	 * @returns array $stats Counts of different entry types
+	 */
+	function get_entries_count() {
+		global $wpdb;
+		
+		$stats = array();
+				
+		$entries = $wpdb->get_results( "SELECT entries.entry_approved, COUNT( * ) AS num_entries FROM $this->entries_table_name AS entries WHERE 1=1 GROUP BY entries.entry_approved", ARRAY_A );
+		
+		$total = 0;
+		$approved = array( '0' => 'moderated', '1' => 'approved', 'spam' => 'spam', 'trash' => 'trash', 'post-trashed' => 'post-trashed');
+		foreach ( (array) $entries as $row ) {
+			// Don't count trashed toward totals
+			if ( 'trash' != $row['entry_approved'] )
+				$total += $row['num_entries'];
+			if ( isset( $approved[ $row['entry_approved' ] ] ) )
+				$stats[ $approved[ $row['entry_approved' ] ] ] = $row['num_entries'];
+		}
+		
+		$stats['all'] = $total;
+		foreach ( $approved as $key ) {
+			if ( empty( $stats[ $key ] ) )
+				$stats[ $key ] = 0;
+		}
+		
+		$stats = (object) $stats;
+		
+		return $stats;
 	}
 	
 	/**
@@ -172,9 +258,13 @@ class VisualFormBuilder_Entries_List extends WP_List_Table {
 	 * @returns array() $actions Bulk actions
 	 */
 	function get_bulk_actions() {
-		$actions = array(
-			'delete' => __( 'Delete' , 'visual-form-builder'),
-		);
+		
+		if ( !$this->get_entry_status() || 'all' == $this->get_entry_status() )
+			$actions['trash'] = __( 'Move to Trash', 'visual-form-builder' );
+		elseif ( $this->get_entry_status() && 'trash' == $this->get_entry_status() ) {
+			$actions['restore'] = __( 'Restore', 'visual-form-builder' );
+			$actions['delete'] = __( 'Delete Permanently', 'visual-form-builder' );
+		}
 		
 		return $actions;
 	}
@@ -185,7 +275,39 @@ class VisualFormBuilder_Entries_List extends WP_List_Table {
 	 * @since 1.2
 	 */
 	function process_bulk_action() {
-		switch( $this->current_action() ) {
+		global $wpdb;
+		
+		$entry_id = '';
+		
+		// Set the Entry ID array		
+		if ( isset( $_REQUEST['entry'] ) ) :
+			if ( is_array( $_REQUEST['entry'] ) )
+				$entry_id = $_REQUEST['entry'];
+			else
+				$entry_id = (array) $_REQUEST['entry'];
+		endif;
+		
+		switch( $this->current_action() ) :		
+			case 'trash' :
+				foreach ( $entry_id as $id ) {
+					$id = absint( $id );
+					$wpdb->update( $this->entries_table_name, array( 'entry_approved' => 'trash' ), array( 'entries_id' => $id ) );
+				}
+			break;
+			
+			case 'delete' :
+				foreach ( $entry_id as $id ) {
+					$id = absint( $id );
+					$wpdb->query( $wpdb->prepare( "DELETE FROM $this->entries_table_name WHERE entries_id = %d", $id ) );
+				}
+			break;
+			
+			case 'restore' :
+				foreach ( $entry_id as $id ) {
+					$id = absint( $id );
+					$wpdb->update( $this->entries_table_name, array( 'entry_approved' => 1 ), array( 'entries_id' => $id ) );
+				}
+			break;
 			
 			case 'delete' :
 				$entry_id = ( isset( $_REQUEST['entry'] ) && is_array( $_REQUEST['entry'] ) ) ? $_REQUEST['entry'] : array( $_REQUEST['entry'] );
@@ -197,7 +319,7 @@ class VisualFormBuilder_Entries_List extends WP_List_Table {
 					$wpdb->query( $wpdb->prepare( "DELETE FROM $this->entries_table_name WHERE entries_id = %d", $id ) );
 				}
 			break;
-		}
+		endswitch;
 	}
 		
 	/**

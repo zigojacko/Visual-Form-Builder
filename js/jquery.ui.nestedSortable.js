@@ -1,1 +1,429 @@
-(function(a){a.widget("ui.nestedSortable",a.extend({},a.ui.sortable.prototype,{options:{tabSize:20,disableNesting:"ui-nestedSortable-no-nesting",errorClass:"ui-nestedSortable-error",listType:"ol",maxLevels:0,revertOnError:1},_create:function(){this.element.data("sortable",this.element.data("nestedSortable"));return a.ui.sortable.prototype._create.apply(this,arguments)},destroy:function(){this.element.removeData("nestedSortable").unbind(".nestedSortable");return a.ui.sortable.prototype.destroy.apply(this,arguments)},_mouseDrag:function(b){this.position=this._generatePosition(b);this.positionAbs=this._convertPositionTo("absolute");if(!this.lastPositionAbs){this.lastPositionAbs=this.positionAbs}if(this.options.scroll){var c=this.options,d=false;if(this.scrollParent[0]!=document&&this.scrollParent[0].tagName!="HTML"){if(this.overflowOffset.top+this.scrollParent[0].offsetHeight-b.pageY<c.scrollSensitivity)this.scrollParent[0].scrollTop=d=this.scrollParent[0].scrollTop+c.scrollSpeed;else if(b.pageY-this.overflowOffset.top<c.scrollSensitivity)this.scrollParent[0].scrollTop=d=this.scrollParent[0].scrollTop-c.scrollSpeed;if(this.overflowOffset.left+this.scrollParent[0].offsetWidth-b.pageX<c.scrollSensitivity)this.scrollParent[0].scrollLeft=d=this.scrollParent[0].scrollLeft+c.scrollSpeed;else if(b.pageX-this.overflowOffset.left<c.scrollSensitivity)this.scrollParent[0].scrollLeft=d=this.scrollParent[0].scrollLeft-c.scrollSpeed}else{if(b.pageY-a(document).scrollTop()<c.scrollSensitivity)d=a(document).scrollTop(a(document).scrollTop()-c.scrollSpeed);else if(a(window).height()-(b.pageY-a(document).scrollTop())<c.scrollSensitivity)d=a(document).scrollTop(a(document).scrollTop()+c.scrollSpeed);if(b.pageX-a(document).scrollLeft()<c.scrollSensitivity)d=a(document).scrollLeft(a(document).scrollLeft()-c.scrollSpeed);else if(a(window).width()-(b.pageX-a(document).scrollLeft())<c.scrollSensitivity)d=a(document).scrollLeft(a(document).scrollLeft()+c.scrollSpeed)}if(d!==false&&a.ui.ddmanager&&!c.dropBehaviour)a.ui.ddmanager.prepareOffsets(this,b)}this.positionAbs=this._convertPositionTo("absolute");if(!this.options.axis||this.options.axis!="y")this.helper[0].style.left=this.position.left+"px";if(!this.options.axis||this.options.axis!="x")this.helper[0].style.top=this.position.top+"px";for(var e=this.items.length-1;e>=0;e--){var f=this.items[e],g=f.item[0],h=this._intersectsWithPointer(f);if(!h)continue;if(g!=this.currentItem[0]&&this.placeholder[h==1?"next":"prev"]()[0]!=g&&!a.contains(this.placeholder[0],g)&&(this.options.type=="semi-dynamic"?!a.contains(this.element[0],g):true)){a(g).mouseenter();this.direction=h==1?"down":"up";if(this.options.tolerance=="pointer"||this._intersectsWithSides(f)){a(g).mouseleave();this._rearrange(b,f)}else{break}this._clearEmpty(g);this._trigger("change",b,this._uiHash());break}}var i=this.placeholder[0].parentNode.parentNode&&a(this.placeholder[0].parentNode.parentNode).closest(".ui-sortable").length?a(this.placeholder[0].parentNode.parentNode):null,j=this._getLevel(this.placeholder),k=this._getChildLevels(this.helper),l=this.placeholder[0].previousSibling?a(this.placeholder[0].previousSibling):null;if(l!=null){while(l[0].nodeName.toLowerCase()!="li"||l[0]==this.currentItem[0]){if(l[0].previousSibling){l=a(l[0].previousSibling)}else{l=null;break}}}newList=document.createElement(c.listType);this.beyondMaxLevels=0;if(i!=null&&this.positionAbs.left<i.offset().left){i.after(this.placeholder[0]);this._clearEmpty(i[0]);this._trigger("change",b,this._uiHash())}else if(l!=null&&this.positionAbs.left>l.offset().left+c.tabSize){this._isAllowed(l,j+k+1);if(!l.children(c.listType).length){l[0].appendChild(newList)}l.children(c.listType)[0].appendChild(this.placeholder[0]);this._trigger("change",b,this._uiHash())}else{this._isAllowed(i,j+k)}this._contactContainers(b);if(a.ui.ddmanager)a.ui.ddmanager.drag(this,b);this._trigger("sort",b,this._uiHash());this.lastPositionAbs=this.positionAbs;return false},_mouseStop:function(b,c){if(this.beyondMaxLevels){this.placeholder.removeClass(this.options.errorClass);if(this.options.revertOnError){if(this.domPosition.prev){a(this.domPosition.prev).after(this.placeholder)}else{a(this.domPosition.parent).prepend(this.placeholder)}this._trigger("revert",b,this._uiHash())}else{var d=this.placeholder.parent().closest(this.options.items);for(var e=this.beyondMaxLevels-1;e>0;e--){d=d.parent().closest(this.options.items)}d.after(this.placeholder);this._trigger("change",b,this._uiHash())}}for(var e=this.items.length-1;e>=0;e--){var f=this.items[e].item[0];this._clearEmpty(f)}a.ui.sortable.prototype._mouseStop.apply(this,arguments)},serialize:function(b){var c=this._getItemsAsjQuery(b&&b.connected),d=[];b=b||{};a(c).each(function(){var c=(a(b.item||this).attr(b.attribute||"id")||"").match(b.expression||/(.+)[-=_](.+)/),e=(a(b.item||this).parent(b.listType).parent("li").attr(b.attribute||"id")||"").match(b.expression||/(.+)[-=_](.+)/);if(c){d.push((b.key||c[1]+"["+(b.key&&b.expression?c[1]:c[2])+"]")+"="+(e?b.key&&b.expression?e[1]:e[2]:"root"))}});if(!d.length&&b.key){d.push(b.key+"=")}return d.join("&")},toHierarchy:function(b){function e(c){var d=(a(c).attr(b.attribute||"id")||"").match(b.expression||/(.+)[-=_](.+)/);if(d){var f={id:d[2]};if(a(c).children(b.listType).children("li").length>0){f.children=[];a(c).children(b.listType).children("li").each(function(){var b=e(a(this));f.children.push(b)})}return f}}b=b||{};var c=b.startDepthCount||0,d=[];a(this.element).children("li").each(function(){var b=e(a(this));d.push(b)});return d},toArray:function(b){function f(e,g,h){var i=h+1,j,k;if(a(e).children(b.listType).children("li").length>0){g++;a(e).children(b.listType).children("li").each(function(){i=f(a(this),g,i)});g--}j=a(e).attr(b.attribute||"id").match(b.expression||/(.+)[-=_](.+)/);if(g===c+1){k="root"}else{var l=a(e).parent(b.listType).parent("li").attr(b.attribute||"id").match(b.expression||/(.+)[-=_](.+)/);k=l[2]}if(j){d.push({item_id:j[2],parent_id:k,depth:g,left:h,right:i})}h=i+1;return h}b=b||{};var c=b.startDepthCount||0,d=[],e=2;d.push({item_id:"root",parent_id:"none",depth:c,left:"1",right:(a("li",this.element).length+1)*2});a(this.element).children("li").each(function(){e=f(this,c+1,e)});d=d.sort(function(a,b){return a.left-b.left});return d},_clearEmpty:function(b){var c=a(b).children(this.options.listType);if(c.length&&!c.children().length){c.remove()}},_getLevel:function(a){var b=1;if(this.options.listType){var c=a.closest(this.options.listType);while(!c.is(".ui-sortable")){b++;c=c.parent().closest(this.options.listType)}}return b},_getChildLevels:function(b,c){var d=this,e=this.options,f=0;c=c||0;a(b).children(e.listType).children(e.items).each(function(a,b){f=Math.max(d._getChildLevels(b,c+1),f)});return c?f+1:f},_isAllowed:function(a,b){var c=this.options;if(a==null||!a.hasClass(c.disableNesting)){if(c.maxLevels<b&&c.maxLevels!=0){this.placeholder.addClass(c.errorClass);this.beyondMaxLevels=b-c.maxLevels}else{this.placeholder.removeClass(c.errorClass);this.beyondMaxLevels=0}}else{this.placeholder.addClass(c.errorClass);if(c.maxLevels<b&&c.maxLevels!=0){this.beyondMaxLevels=b-c.maxLevels}else{this.beyondMaxLevels=1}}}}));a.ui.nestedSortable.prototype.options=a.extend({},a.ui.sortable.prototype.options,a.ui.nestedSortable.prototype.options)})(jQuery)
+/*
+ * jQuery UI Nested Sortable
+ * v 1.3.5 / 21 jun 2012
+ * http://mjsarfatti.com/code/nestedSortable
+ *
+ * Depends on:
+ *	 jquery.ui.sortable.js 1.8+
+ *
+ * Copyright (c) 2010-2012 Manuele J Sarfatti
+ * Licensed under the MIT License
+ * http://www.opensource.org/licenses/mit-license.php
+ */
+
+(function($) {
+
+	$.widget("mjs.nestedSortable", $.extend({}, $.ui.sortable.prototype, {
+
+		options: {
+			tabSize: 20,
+			disableNesting: 'mjs-nestedSortable-no-nesting',
+			errorClass: 'mjs-nestedSortable-error',
+			doNotClear: false,
+			listType: 'ol',
+			maxLevels: 0,
+			protectRoot: false,
+			rootID: null,
+			rtl: false,
+			isAllowed: function(item, parent) { return true; }
+		},
+
+		_create: function() {
+			this.element.data('sortable', this.element.data('nestedSortable'));
+
+			if (!this.element.is(this.options.listType))
+				throw new Error('nestedSortable: Please check the listType option is set to your actual list type');
+
+			return $.ui.sortable.prototype._create.apply(this, arguments);
+		},
+
+		destroy: function() {
+			this.element
+				.removeData("nestedSortable")
+				.unbind(".nestedSortable");
+			return $.ui.sortable.prototype.destroy.apply(this, arguments);
+		},
+
+		_mouseDrag: function(event) {
+
+			//Compute the helpers position
+			this.position = this._generatePosition(event);
+			this.positionAbs = this._convertPositionTo("absolute");
+
+			if (!this.lastPositionAbs) {
+				this.lastPositionAbs = this.positionAbs;
+			}
+
+			var o = this.options;
+
+			//Do scrolling
+			if(this.options.scroll) {
+				var scrolled = false;
+				if(this.scrollParent[0] != document && this.scrollParent[0].tagName != 'HTML') {
+
+					if((this.overflowOffset.top + this.scrollParent[0].offsetHeight) - event.pageY < o.scrollSensitivity)
+						this.scrollParent[0].scrollTop = scrolled = this.scrollParent[0].scrollTop + o.scrollSpeed;
+					else if(event.pageY - this.overflowOffset.top < o.scrollSensitivity)
+						this.scrollParent[0].scrollTop = scrolled = this.scrollParent[0].scrollTop - o.scrollSpeed;
+
+					if((this.overflowOffset.left + this.scrollParent[0].offsetWidth) - event.pageX < o.scrollSensitivity)
+						this.scrollParent[0].scrollLeft = scrolled = this.scrollParent[0].scrollLeft + o.scrollSpeed;
+					else if(event.pageX - this.overflowOffset.left < o.scrollSensitivity)
+						this.scrollParent[0].scrollLeft = scrolled = this.scrollParent[0].scrollLeft - o.scrollSpeed;
+
+				} else {
+
+					if(event.pageY - $(document).scrollTop() < o.scrollSensitivity)
+						scrolled = $(document).scrollTop($(document).scrollTop() - o.scrollSpeed);
+					else if($(window).height() - (event.pageY - $(document).scrollTop()) < o.scrollSensitivity)
+						scrolled = $(document).scrollTop($(document).scrollTop() + o.scrollSpeed);
+
+					if(event.pageX - $(document).scrollLeft() < o.scrollSensitivity)
+						scrolled = $(document).scrollLeft($(document).scrollLeft() - o.scrollSpeed);
+					else if($(window).width() - (event.pageX - $(document).scrollLeft()) < o.scrollSensitivity)
+						scrolled = $(document).scrollLeft($(document).scrollLeft() + o.scrollSpeed);
+
+				}
+
+				if(scrolled !== false && $.ui.ddmanager && !o.dropBehaviour)
+					$.ui.ddmanager.prepareOffsets(this, event);
+			}
+
+			//Regenerate the absolute position used for position checks
+			this.positionAbs = this._convertPositionTo("absolute");
+
+      // Find the top offset before rearrangement,
+      var previousTopOffset = this.placeholder.offset().top;
+
+			//Set the helper position
+			if(!this.options.axis || this.options.axis != "y") this.helper[0].style.left = this.position.left+'px';
+			if(!this.options.axis || this.options.axis != "x") this.helper[0].style.top = this.position.top+'px';
+
+			//Rearrange
+			for (var i = this.items.length - 1; i >= 0; i--) {
+
+				//Cache variables and intersection, continue if no intersection
+				var item = this.items[i], itemElement = item.item[0], intersection = this._intersectsWithPointer(item);
+				if (!intersection) continue;
+
+				if(itemElement != this.currentItem[0] //cannot intersect with itself
+					&&	this.placeholder[intersection == 1 ? "next" : "prev"]()[0] != itemElement //no useless actions that have been done before
+					&&	!$.contains(this.placeholder[0], itemElement) //no action if the item moved is the parent of the item checked
+					&& (this.options.type == 'semi-dynamic' ? !$.contains(this.element[0], itemElement) : true)
+					//&& itemElement.parentNode == this.placeholder[0].parentNode // only rearrange items within the same container
+				) {
+
+					$(itemElement).mouseenter();
+
+					this.direction = intersection == 1 ? "down" : "up";
+
+					if (this.options.tolerance == "pointer" || this._intersectsWithSides(item)) {
+						$(itemElement).mouseleave();
+						this._rearrange(event, item);
+					} else {
+						break;
+					}
+
+					// Clear emtpy ul's/ol's
+					this._clearEmpty(itemElement);
+
+					this._trigger("change", event, this._uiHash());
+					break;
+				}
+			}
+
+			var parentItem = (this.placeholder[0].parentNode.parentNode &&
+							 $(this.placeholder[0].parentNode.parentNode).closest('.ui-sortable').length)
+				       			? $(this.placeholder[0].parentNode.parentNode)
+				       			: null,
+			    level = this._getLevel(this.placeholder),
+			    childLevels = this._getChildLevels(this.helper);
+
+      // To find the previous sibling in the list, keep backtracking until we hit a valid list item.
+			var previousItem = this.placeholder[0].previousSibling ? $(this.placeholder[0].previousSibling) : null;
+			if (previousItem != null) {
+				while (previousItem[0].nodeName.toLowerCase() != 'li' || previousItem[0] == this.currentItem[0] || previousItem[0] == this.helper[0]) {
+					if (previousItem[0].previousSibling) {
+						previousItem = $(previousItem[0].previousSibling);
+					} else {
+						previousItem = null;
+						break;
+					}
+				}
+			}
+
+      // To find the next sibling in the list, keep stepping forward until we hit a valid list item.
+      var nextItem = this.placeholder[0].nextSibling ? $(this.placeholder[0].nextSibling) : null;
+      if (nextItem != null) {
+        while (nextItem[0].nodeName.toLowerCase() != 'li' || nextItem[0] == this.currentItem[0] || nextItem[0] == this.helper[0]) {
+          if (nextItem[0].nextSibling) {
+            nextItem = $(nextItem[0].nextSibling);
+          } else {
+            nextItem = null;
+            break;
+          }
+        }
+      }
+
+			var newList = document.createElement(o.listType);
+
+			this.beyondMaxLevels = 0;
+			
+			// If the item is moved to the left, send it to its parent's level unless there are siblings below it.
+			if (parentItem != null && nextItem == null &&
+					(o.rtl && (this.positionAbs.left + this.helper.outerWidth() > parentItem.offset().left + parentItem.outerWidth()) ||
+					!o.rtl && (this.positionAbs.left < parentItem.offset().left))) {
+				parentItem.after(this.placeholder[0]);
+				this._clearEmpty(parentItem[0]);
+				this._trigger("change", event, this._uiHash());
+			}
+			// If the item is below a sibling and is moved to the right, make it a child of that sibling.
+			else if (previousItem != null &&
+						(o.rtl && (this.positionAbs.left + this.helper.outerWidth() < previousItem.offset().left + previousItem.outerWidth() - o.tabSize) ||
+						!o.rtl && (this.positionAbs.left > previousItem.offset().left + o.tabSize))) {
+				this._isAllowed(previousItem, level, level+childLevels+1);
+				if (!previousItem.children(o.listType).length) {
+					previousItem[0].appendChild(newList);
+				}
+        // If this item is being moved from the top, add it to the top of the list.
+        if (previousTopOffset && (previousTopOffset <= previousItem.offset().top)) {
+          previousItem.children(o.listType).prepend(this.placeholder);
+        }
+        // Otherwise, add it to the bottom of the list.
+        else {
+				  previousItem.children(o.listType)[0].appendChild(this.placeholder[0]);
+        }
+				this._trigger("change", event, this._uiHash());
+			}
+			else {
+				this._isAllowed(parentItem, level, level+childLevels);
+			}
+
+			//Post events to containers
+			this._contactContainers(event);
+
+			//Interconnect with droppables
+			if($.ui.ddmanager) $.ui.ddmanager.drag(this, event);
+
+			//Call callbacks
+			this._trigger('sort', event, this._uiHash());
+
+			this.lastPositionAbs = this.positionAbs;
+			return false;
+
+		},
+
+		_mouseStop: function(event, noPropagation) {
+
+			// If the item is in a position not allowed, send it back
+			if (this.beyondMaxLevels) {
+
+				this.placeholder.removeClass(this.options.errorClass);
+
+				if (this.domPosition.prev) {
+					$(this.domPosition.prev).after(this.placeholder);
+				} else {
+					$(this.domPosition.parent).prepend(this.placeholder);
+				}
+
+				this._trigger("revert", event, this._uiHash());
+
+			}
+
+			// Clean last empty ul/ol
+			for (var i = this.items.length - 1; i >= 0; i--) {
+				var item = this.items[i].item[0];
+				this._clearEmpty(item);
+			}
+
+			$.ui.sortable.prototype._mouseStop.apply(this, arguments);
+
+		},
+
+		serialize: function(options) {
+
+			var o = $.extend({}, this.options, options),
+				items = this._getItemsAsjQuery(o && o.connected),
+			    str = [];
+
+			$(items).each(function() {
+				var res = ($(o.item || this).attr(o.attribute || 'id') || '')
+						.match(o.expression || (/(.+)[-=_](.+)/)),
+				    pid = ($(o.item || this).parent(o.listType)
+						.parent(o.items)
+						.attr(o.attribute || 'id') || '')
+						.match(o.expression || (/(.+)[-=_](.+)/));
+
+				if (res) {
+					str.push(((o.key || res[1]) + '[' + (o.key && o.expression ? res[1] : res[2]) + ']')
+						+ '='
+						+ (pid ? (o.key && o.expression ? pid[1] : pid[2]) : o.rootID));
+				}
+			});
+
+			if(!str.length && o.key) {
+				str.push(o.key + '=');
+			}
+
+			return str.join('&');
+
+		},
+
+		toHierarchy: function(options) {
+
+			var o = $.extend({}, this.options, options),
+				sDepth = o.startDepthCount || 0,
+			    ret = [];
+
+			$(this.element).children(o.items).each(function () {
+				var level = _recursiveItems(this);
+				ret.push(level);
+			});
+
+			return ret;
+
+			function _recursiveItems(item) {
+				var id = ($(item).attr(o.attribute || 'id') || '').match(o.expression || (/(.+)[-=_](.+)/));
+				if (id) {
+					var currentItem = {"id" : id[2]};
+					if ($(item).children(o.listType).children(o.items).length > 0) {
+						currentItem.children = [];
+						$(item).children(o.listType).children(o.items).each(function() {
+							var level = _recursiveItems(this);
+							currentItem.children.push(level);
+						});
+					}
+					return currentItem;
+				}
+			}
+		},
+
+		toArray: function(options) {
+
+			var o = $.extend({}, this.options, options),
+				sDepth = o.startDepthCount || 0,
+			    ret = [],
+			    left = 2;
+
+			ret.push({
+				"item_id": o.rootID,
+				"parent_id": 'none',
+				"depth": sDepth,
+				"left": '1',
+				"right": ($(o.items, this.element).length + 1) * 2
+			});
+
+			$(this.element).children(o.items).each(function () {
+				left = _recursiveArray(this, sDepth + 1, left);
+			});
+
+			ret = ret.sort(function(a,b){ return (a.left - b.left); });
+
+			return ret;
+
+			function _recursiveArray(item, depth, left) {
+
+				var right = left + 1,
+				    id,
+				    pid;
+
+				if ($(item).children(o.listType).children(o.items).length > 0) {
+					depth ++;
+					$(item).children(o.listType).children(o.items).each(function () {
+						right = _recursiveArray($(this), depth, right);
+					});
+					depth --;
+				}
+
+				id = ($(item).attr(o.attribute || 'id')).match(o.expression || (/(.+)[-=_](.+)/));
+
+				if (depth === sDepth + 1) {
+					pid = o.rootID;
+				} else {
+					var parentItem = ($(item).parent(o.listType)
+											 .parent(o.items)
+											 .attr(o.attribute || 'id'))
+											 .match(o.expression || (/(.+)[-=_](.+)/));
+					pid = parentItem[2];
+				}
+
+				if (id) {
+						ret.push({"item_id": id[2], "parent_id": pid, "depth": depth, "left": left, "right": right});
+				}
+
+				left = right + 1;
+				return left;
+			}
+
+		},
+
+		_clearEmpty: function(item) {
+
+			var emptyList = $(item).children(this.options.listType);
+			if (emptyList.length && !emptyList.children().length && !this.options.doNotClear) {
+				emptyList.remove();
+			}
+
+		},
+
+		_getLevel: function(item) {
+
+			var level = 1;
+
+			if (this.options.listType) {
+				var list = item.closest(this.options.listType);
+				while (list && list.length > 0 && 
+                    	!list.is('.ui-sortable')) {
+					level++;
+					list = list.parent().closest(this.options.listType);
+				}
+			}
+
+			return level;
+		},
+
+		_getChildLevels: function(parent, depth) {
+			var self = this,
+			    o = this.options,
+			    result = 0;
+			depth = depth || 0;
+
+			$(parent).children(o.listType).children(o.items).each(function (index, child) {
+					result = Math.max(self._getChildLevels(child, depth + 1), result);
+			});
+
+			return depth ? result + 1 : result;
+		},
+
+		_isAllowed: function(parentItem, level, levels) {
+			var o = this.options,
+				isRoot = $(this.domPosition.parent).hasClass('ui-sortable') ? true : false,
+				maxLevels = this.placeholder.closest('.ui-sortable').nestedSortable('option', 'maxLevels'); // this takes into account the maxLevels set to the recipient list
+
+			// Is the root protected?
+			// Are we trying to nest under a no-nest?
+			// Are we nesting too deep?
+			if (!o.isAllowed(this.currentItem, parentItem) ||
+				parentItem && parentItem.hasClass(o.disableNesting) ||
+				o.protectRoot && (parentItem == null && !isRoot || isRoot && level > 1)) {
+					this.placeholder.addClass(o.errorClass);
+					if (maxLevels < levels && maxLevels != 0) {
+						this.beyondMaxLevels = levels - maxLevels;
+					} else {
+						this.beyondMaxLevels = 1;
+					}
+			} else {
+				if (maxLevels < levels && maxLevels != 0) {
+					this.placeholder.addClass(o.errorClass);
+					this.beyondMaxLevels = levels - maxLevels;
+				} else {
+					this.placeholder.removeClass(o.errorClass);
+					this.beyondMaxLevels = 0;
+				}
+			}
+		}
+
+	}));
+
+	$.mjs.nestedSortable.prototype.options = $.extend({}, $.ui.sortable.prototype.options, $.mjs.nestedSortable.prototype.options);
+})(jQuery);
