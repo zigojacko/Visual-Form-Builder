@@ -4,7 +4,7 @@ Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=G87A9
 Tags: form, forms, contact form, contact forms, form, forms, form to email, email form, email, input, validation, jquery, shortcode, form builder, contact form builder, form manager, form creator
 Requires at least: 3.5
 Tested up to: 3.6
-Stable tag: 2.7.4
+Stable tag: 2.7.5
 License: GPLv2 or later
 
 Build beautiful, fully functional contact forms in only a few minutes without writing PHP, CSS, or HTML.
@@ -171,7 +171,7 @@ Before following this process, make sure you have updated all plugins to their l
 
 If everything works with only Visual Form Builder activated, you have a plugin conflict. Re-activate the plugins one by one until you find the problematic plugin(s).
 
-If, after following the above procedures, you are still having problems please report this issue on the [Support Forum](http://wordpress.org/support/plugin/visual-form-builder). 
+If, after following the above procedures, you are still having problems please report this issue on the [Support Forum](http://wordpress.org/support/plugin/visual-form-builder).
 
 = Customizing the form design =
 
@@ -212,7 +212,7 @@ function my_scripts_method() {
        array( 'jquery', 'jquery-form-validation' ),
        '1.0',
        false );
-     
+
    wp_enqueue_script( 'my-vfb-validation' );
 }`
 
@@ -225,7 +225,20 @@ function my_scripts_method() {
 
 == Changelog ==
 
-**Version 2.7.4  — May 08, 2013**
+**Version 2.7.5 — Jun 06, 2013**
+
+* Add Print button to Entry Detail view
+* Add Duplicate link to Form List view
+* Add meta keyword for plugin version number
+* Update HTML field to use CKEditor instead of Quicktags
+* Update CSS to include :focus styles
+* Update Entry Detail to link File Uploads
+* Fix bug during Export for duplicate field names
+* Fix bug on Export page where Page to Export option may not appear
+* Fix bug on Export page where Fields were not limited to 1000 in an edge case
+* Fix bug where delete link did not work in Form List view
+
+**Version 2.7.4 — May 08, 2013**
 
 * Update Numbers field to allow either Digits or Number validation and sanitize as float instead of int
 * Update Entries Detail "Delete" link to a "Trash" link
@@ -235,11 +248,11 @@ function my_scripts_method() {
 * Fix bug on Entries List to properly display Today's Entries
 * Minor updates
 
-**Version 2.7.3  — May 07, 2013**
+**Version 2.7.3 — May 07, 2013**
 
 * Fix bug where referer URL was not compatible with certain permalink structures
 
-**Version 2.7.2  — May 05, 2013**
+**Version 2.7.2 — May 05, 2013**
 
 * Add form search in admin
 * Add 'Pages to Export' option when more than 1000 entries detected for a single form
@@ -533,6 +546,9 @@ function my_scripts_method() {
 
 == Upgrade Notice ==
 
+= 2.7.5 =
+Update HTML field to use CKEditor. Fix Export bugs.
+
 = 2.7.4 =
 Fix bug where referer URL did not match domains that prepended www. Fix bug where file uploads were not being sent. Other updates and fixes.
 
@@ -552,7 +568,7 @@ Add sidebar and dashboard widgets. Fix Export bugs.
 Fix bug where Validation would be removed on saving predefined fields
 
 = 2.6.8 =
-Add Reply-To to email headers for better compatibility with some email servers; updated CSV export 
+Add Reply-To to email headers for better compatibility with some email servers; updated CSV export
 
 = 2.6.7 =
 Fix bug where notification email did not send

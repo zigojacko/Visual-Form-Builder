@@ -1,34 +1,34 @@
 <?php
 /**
  * Class that builds our Entries detail page
- * 
+ *
  * @since 1.4
  */
 class VisualFormBuilder_Entries_Detail{
 	public function __construct(){
 		global $wpdb;
-		
+
 		// Setup global database table names
 		$this->field_table_name 	= $wpdb->prefix . 'visual_form_builder_fields';
 		$this->form_table_name 		= $wpdb->prefix . 'visual_form_builder_forms';
 		$this->entries_table_name 	= $wpdb->prefix . 'visual_form_builder_entries';
-		
+
 		add_action( 'admin_init', array( &$this, 'entries_detail' ) );
 	}
-	
+
 	public function entries_detail(){
 		global $wpdb;
-		
+
 		$entry_id = absint( $_REQUEST['entry'] );
-		
+
 		$entries = $wpdb->get_results( $wpdb->prepare( "SELECT forms.form_title, entries.* FROM $this->form_table_name AS forms INNER JOIN $this->entries_table_name AS entries ON entries.form_id = forms.form_id WHERE entries.entries_id  = %d", $entry_id ) );
-		
+
 		echo '<p>' . sprintf( '<a href="?page=%s" class="view-entry">&laquo; Back to Entries</a>', $_REQUEST['page'] ) . '</p>';
-		
+
 		// Get the date/time format that is saved in the options table
 		$date_format = get_option('date_format');
 		$time_format = get_option('time_format');
-		
+
 		// Loop trough the entries and setup the data to be displayed for each row
 		foreach ( $entries as $entry ) {
 			$data = unserialize( $entry->data );
@@ -68,9 +68,14 @@ class VisualFormBuilder_Entries_Detail{
 										<div class="clear"></div>
 									</div> <!--#misc-publishing-actions -->
 								</div> <!-- #minor-publishing -->
-								
+
 								<div id="major-publishing-actions">
-									<div id="delete-action"><?php echo sprintf( '<a class="submitdelete deletion entry-delete" href="?page=%s&action=%s&entry=%s">Trash</a>', $_REQUEST['page'], 'trash_entry', $entry_id ); ?></div>
+									<div id="delete-action">
+										<?php echo sprintf( '<a class="submitdelete deletion entry-delete" href="?page=%2$s&action=%3$s&entry=%4$d">%1$s</a>', __( 'Move to Trash', 'visual-form-builder' ), $_REQUEST['page'], 'trash', $entry_id ); ?>
+									</div>
+									<div id="publishing-action">
+										<?php submit_button( __( 'Print', 'visual-form-builder' ), 'secondary', 'submit', false, array( 'onclick' => 'window.print();return false;' ) ); ?>
+									</div>
 									<div class="clear"></div>
 								</div> <!-- #major-publishing-actions -->
 							</div> <!-- #submitbox -->
@@ -83,7 +88,7 @@ class VisualFormBuilder_Entries_Detail{
         <?php
 			$count = 0;
 			$open_fieldset = $open_section = false;
-			
+
 			foreach ( $data as $k => $v ) {
 				if ( !is_array( $v ) ) {
 					if ( $count == 0 ) {
@@ -91,7 +96,7 @@ class VisualFormBuilder_Entries_Detail{
 							<h3><span>' . $entry->form_title . ' : ' . __( 'Entry' , 'visual-form-builder') .' #' . $entry->entries_id . '</span></h3>
 							<div class="inside">';
 					}
-					
+
 					echo '<h4>' . ucwords( $k ) . '</h4>';
 					echo $v;
 					$count++;
@@ -99,18 +104,18 @@ class VisualFormBuilder_Entries_Detail{
 				else {
 					// Cast each array as an object
 					$obj = (object) $v;
-					
+
 					if ( $obj->type == 'fieldset' ) {
 						// Close each fieldset
 						if ( $open_fieldset == true )
 							echo '</table>';
-						
+
 						echo '<h3>' . stripslashes( $obj->name ) . '</h3><table class="form-table">';
-						
+
 						$open_fieldset = true;
 					}
-					
-					
+
+
 					switch ( $obj->type ) {
 						case 'fieldset' :
 						case 'section' :
@@ -120,28 +125,37 @@ class VisualFormBuilder_Entries_Detail{
 						case 'secret' :
 
 						break;
-						
+
+						case 'file-upload' :
+							?>
+							<tr valign="top">
+								<th scope="row"><label for="field[<?php echo $obj->id; ?>]"><?php echo stripslashes( $obj->name ); ?></label></th>
+								<td style="background:#eee;border:1px solid #ddd"><a href="<?php esc_attr_e( $obj->value ); ?>" target="_blank"><?php echo stripslashes( esc_html( $obj->value ) ); ?></a></td>
+							</tr>
+	                    	<?php
+						break;
+
 						default :
 							?>
 							<tr valign="top">
 								<th scope="row"><label for="field[<?php echo $obj->id; ?>]"><?php echo stripslashes( $obj->name ); ?></label></th>
-								<td style="background:#eee;border:1px solid #ddd"><?php echo stripslashes( esc_attr( $obj->value ) ); ?></td>
+								<td style="background:#eee;border:1px solid #ddd"><?php echo stripslashes( wp_specialchars_decode( esc_html( $obj->value ) ) ); ?></td>
 							</tr>
                         	<?php
 						break;
-												
+
 					}
 				}
 			}
-			
+
 			if ( $count > 0 )
 				echo '</div></div>';
-		
+
 		}
 		echo '</table></div>';
 		echo '<br class="clear"></div>';
-		
-		
+
+
 		echo '</form>';
 	}
 }
