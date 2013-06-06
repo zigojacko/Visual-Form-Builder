@@ -3,7 +3,7 @@
 if ( !defined( 'DONOTCACHEPAGE' ) )
 	define( 'DONOTCACHEPAGE', true );
 
-global $wpdb;
+global $wpdb, $wp;
 
 // Extract shortcode attributes, set defaults
 extract( shortcode_atts( array(
@@ -42,8 +42,11 @@ $open_fieldset = $open_section = false;
 $submit = 'Submit';
 $verification = '';
 
+// Current URL
+$current_url = home_url( add_query_arg( array(), $wp->request ) );
+
 $label_alignment = ( $form->form_label_alignment !== '' ) ? " $form->form_label_alignment" : '';
-$output = '<div class="visual-form-builder-container"><form id="' . $form->form_key . '" class="visual-form-builder' . $label_alignment . '" method="post" enctype="multipart/form-data">
+$output = '<div class="visual-form-builder-container"><form id="' . $form->form_key . '" class="visual-form-builder' . $label_alignment . '" method="post" 46="multipart/form-data">
 			<input type="hidden" name="form_id" value="' . $form->form_id . '" />';
 
 foreach ( $fields as $field ) :
@@ -323,27 +326,27 @@ foreach ( $fields as $field ) :
 			
 			$address_parts = array(
 			    'address'    => array(
-			    	'label'    => __( 'Address', 'visual-form-builder-pro' ),
+			    	'label'    => __( 'Address', 'visual-form-builder' ),
 			    	'layout'   => 'full'
 			    ),
 			    'address-2'  => array(
-			    	'label'    => __( 'Address Line 2', 'visual-form-builder-pro' ),
+			    	'label'    => __( 'Address Line 2', 'visual-form-builder' ),
 			    	'layout'   => 'full'
 			    ),
 			    'city'       => array(
-			    	'label'    => __( 'City', 'visual-form-builder-pro' ),
+			    	'label'    => __( 'City', 'visual-form-builder' ),
 			    	'layout'   => 'left'
 			    ),
 			    'state'      => array(
-			    	'label'    => __( 'State / Province / Region', 'visual-form-builder-pro' ),
+			    	'label'    => __( 'State / Province / Region', 'visual-form-builder' ),
 			    	'layout'   => 'right'
 			    ),
 			    'zip'        => array(
-			    	'label'    => __( 'Postal / Zip Code', 'visual-form-builder-pro' ),
+			    	'label'    => __( 'Postal / Zip Code', 'visual-form-builder' ),
 			    	'layout'   => 'left'
 			    ),
 			    'country'    => array(
-			    	'label'    => __( 'Country', 'visual-form-builder-pro' ),
+			    	'label'    => __( 'Country', 'visual-form-builder' ),
 			    	'layout'   => 'right'
 			    )
 			);
@@ -565,10 +568,16 @@ $output .= sprintf(
 	$verification .
 	'<li style="display:none;"><label for="vfb-spam">%1$s:</label><div><input name="vfb-spam" id="vfb-spam" /></div></li>
 	%2$s</ul>
-	</fieldset>
-	</form>
-	</div>',
+	</fieldset>',
 	__( 'This box is for spam protection - <strong>please leave it blank</strong>' , 'visual-form-builder'),
 	$submit
-);	
+);
+
+$output .= sprintf( '<input type="hidden" name="vfb_referral_url" value="%s">', untrailingslashit( $current_url ) );
+
+// Close the form out
+$output .= '</form>';
+
+// Close form container
+$output .= '</div> <!-- .visual-form-builder-container -->';
 ?>
