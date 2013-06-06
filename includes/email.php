@@ -4,17 +4,17 @@ global $wpdb, $post;
 $required 		= ( isset( $_REQUEST['_vfb-required-secret'] ) && $_REQUEST['_vfb-required-secret'] == '0' ) ? false : true;
 $secret_field 	= ( isset( $_REQUEST['_vfb-secret'] ) ) ? $_REQUEST['_vfb-secret'] : '';
 $honeypot 		= ( isset( $_REQUEST['vfb-spam'] ) ) ? $_REQUEST['vfb-spam'] : '';
-$referrer = ( isset( $_REQUEST['vfb_referral_url'] ) ) ? $_REQUEST['vfb_referral_url'] : false;
+$referrer = ( isset( $_REQUEST['_wp_http_referer'] ) ) ? $_REQUEST['_wp_http_referer'] : false;
 $wp_get_referer = wp_get_referer();
 
 // If the verification is set to required, run validation check
-if ( true == $required && !empty( $secret_field ) ) {
+if ( true == $required && !empty( $secret_field ) ) :
 	if ( !empty( $honeypot ) )
 		wp_die( __( 'Security check: hidden spam field should be blank.' , 'visual-form-builder'), '', array( 'back_link' => true ) );
 	if ( !is_numeric( $_REQUEST[ $secret_field ] ) || strlen( $_REQUEST[ $secret_field ] ) !== 2 )
 		wp_die( __( 'Security check: failed secret question. Please try again!' , 'visual-form-builder'), '', array( 'back_link' => true ) );
-}
-		
+endif;
+
 // Basic security check before moving any further
 if ( isset( $_REQUEST['visual-form-builder-submit'] ) ) :
 	
@@ -23,7 +23,7 @@ if ( isset( $_REQUEST['visual-form-builder-submit'] ) ) :
 		wp_die( __( 'Security check: referal URL does not appear to be set.' , 'visual-form-builder'), '', array( 'back_link' => true ) );
 	
 	// Test if the referral URL matches what sent from WordPress
-	if ( $referrer !== $wp_get_referer )
+	if ( $wp_get_referer )
 		wp_die( __( 'Security check: referal does not match this site.' , 'visual-form-builder'), '', array( 'back_link' => true ) );
 	
 	// Test if it's a known SPAM bot
@@ -41,7 +41,7 @@ if ( isset( $_REQUEST['visual-form-builder-submit'] ) ) :
 	$forms = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $this->form_table_name WHERE form_id = %d ORDER BY $order", $form_id ) );
 	
 	// Get sender and email details
-	foreach ( $forms as $form ) {
+	foreach ( $forms as $form ) :
 		$form_settings = (object) array(
 			'form_title' 					=> stripslashes( html_entity_decode( $form->form_title, ENT_QUOTES, 'UTF-8' ) ),
 			'form_subject' 					=> stripslashes( html_entity_decode( $form->form_email_subject, ENT_QUOTES, 'UTF-8' ) ),
@@ -57,7 +57,7 @@ if ( isset( $_REQUEST['visual-form-builder-submit'] ) ) :
 		);
 		// Allow the form settings to be filtered (ex: return $form_settings->'form_title' = 'Hello World';)				
 		$form_settings = (object) apply_filters_ref_array( 'vfb_email_form_settings', array( $form_settings, $form_id ) );
-	}
+	endforeach;
 	
 	// Sender name field ID
 	$sender = $wpdb->get_var( $wpdb->prepare( "SELECT form_email_from_name_override FROM $this->form_table_name WHERE form_id = %d", $form_id ) );
@@ -202,7 +202,9 @@ if ( isset( $_REQUEST['visual-form-builder-submit'] ) ) :
 				$value = $this->build_array_form_item( $value, $field->field_type );
 			// If multiple values, build the list
 			elseif ( is_array( $value ) )
-				$value = esc_html( implode( ', ', $value ) );
+				$value = $this->build_array_form_item( $value, $field->field_type );
+			elseif ( 'radio' == $field->field_type )
+				$value = wp_specialchars_decode( stripslashes( esc_html( $value ) ), ENT_QUOTES );
 			// Lastly, handle single values
 			else
 				$value = html_entity_decode( stripslashes( esc_html( $value ) ), ENT_QUOTES, 'UTF-8' );
@@ -225,7 +227,10 @@ if ( isset( $_REQUEST['visual-form-builder-submit'] ) ) :
 			// Validate input
 			$this->validate_input( $value, $field->field_name, $field->field_type, $field->field_required );
 			
-			if ( ! in_array( $field->field_type, array( 'verification', 'secret', 'submit' ) ) ) :
+			$removed_field_types = array( 'verification', 'secret', 'submit' );
+			
+			// Don't add certain fields to the email
+			if ( ! in_array( $field->field_type, $removed_field_types ) ) :
 				if ( $field->field_type == 'fieldset' ) :
 					$body .= sprintf(
 						'<tr style="background-color:#393E40;color:white;font-size:14px;">
@@ -335,8 +340,8 @@ if ( isset( $_REQUEST['visual-form-builder-submit'] ) ) :
 	// If site domain and admin_email domain match, use admin_email, otherwise a same domain email must be created
 	$from_email = ( $sitename == $domain ) ? $from_email : "wordpress@$sitename";
 	
-	$reply_to 	= "\"$header_from_name\" <$header_from>";
-	$headers = "Sender: $from_email\r\n" . "From: $reply_to\r\n" . "Reply-To: $reply_to\r\n" . "Content-Type: $header_content_type; charset=\"" . get_option('blog_charset') . "\"\r\n";
+	$reply_to	= "\"$from_name\" <$header_from>";
+	$headers 	= "Sender: $from_email\r\n" . "From: $reply_to\r\n" . "Reply-To: $reply_to\r\n" . "Content-Type: $header_content_type; charset=\"" . get_option('blog_charset') . "\"\r\n";
 	
 	$form_subject 	= wp_specialchars_decode( $form_settings->form_subject, ENT_QUOTES );
 	$notify_subject = wp_specialchars_decode( $form_settings->form_notification_subject, ENT_QUOTES );

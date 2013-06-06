@@ -140,8 +140,19 @@ class VisualFormBuilder_Entries_List extends WP_List_Table {
 			$where .= " AND YEAR(date_submitted) = $year AND MONTH(date_submitted) = $month";
 		}
 
+		// Get the month/year from the dropdown
+		$today = isset( $_REQUEST['today'] ) ? (int) $_REQUEST['today'] : 0;
+		
+		// Parse month/year and build the clause
+		if ( $today > 0 )
+			$where .= " AND entries.date_submitted >= curdate()";
+
 		// Entries type filter
 		$where .= ( $this->get_entry_status() && 'all' !== $this->get_entry_status() ) ? $wpdb->prepare( ' AND entries.entry_approved = %s', $this->get_entry_status() ) : '';
+		
+		// Always display approved entries, unless an Entries Type filter is set
+		if ( !$this->get_entry_status() || 'all' == $this->get_entry_status() )
+			$where .= $wpdb->prepare( ' AND entries.entry_approved = %d', 1 );
 
 		$sql_order = sanitize_sql_orderby( "$order_col $order" );
 		$cols = $wpdb->get_results( "SELECT forms.form_title, entries.entries_id, entries.form_id, entries.subject, entries.sender_name, entries.sender_email, entries.emails_to, entries.date_submitted, entries.ip_address FROM $this->form_table_name AS forms INNER JOIN $this->entries_table_name AS entries ON entries.form_id = forms.form_id WHERE 1=1 $where $search ORDER BY $sql_order LIMIT $per_page $offset" );
@@ -512,9 +523,23 @@ class VisualFormBuilder_Entries_List extends WP_List_Table {
 			
 			$where .= " AND YEAR(date_submitted) = $year AND MONTH(date_submitted) = $month";
 		}
+
+		// Get the month/year from the dropdown
+		$today = isset( $_REQUEST['today'] ) ? (int) $_REQUEST['today'] : 0;
+		
+		// Parse month/year and build the clause
+		if ( $today > 0 )
+			$where .= " AND entries.date_submitted >= curdate()";
+
+		// Entry type filter
+		$where .= ( $this->get_entry_status() && 'all' !== $this->get_entry_status() ) ? $wpdb->prepare( ' AND entries.entry_approved = %s', $this->get_entry_status() ) : '';
+		
+		// Always display approved entries, unless an Entries Type filter is set
+		if ( !$this->get_entry_status() || 'all' == $this->get_entry_status() )
+			$where .= $wpdb->prepare( ' AND entries.entry_approved = %d', 1 );
 		
 		// How many entries do we have?
-		$total_items = $wpdb->get_var( "SELECT COUNT(*) FROM $this->entries_table_name AS forms WHERE 1=1 $where" );
+		$total_items = $wpdb->get_var( "SELECT COUNT(*) FROM $this->entries_table_name AS entries WHERE 1=1 $where" );
 
 		// Add sorted data to the items property
 		$this->items = $data;

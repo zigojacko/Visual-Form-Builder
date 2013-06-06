@@ -70,7 +70,7 @@ class VisualFormBuilder_Entries_Detail{
 								</div> <!-- #minor-publishing -->
 								
 								<div id="major-publishing-actions">
-									<div id="delete-action"><?php echo sprintf( '<a class="submitdelete deletion entry-delete" href="?page=%s&action=%s&entry=%s">Delete</a>', $_REQUEST['page'], 'delete', $entry_id ); ?></div>
+									<div id="delete-action"><?php echo sprintf( '<a class="submitdelete deletion entry-delete" href="?page=%s&action=%s&entry=%s">Trash</a>', $_REQUEST['page'], 'trash_entry', $entry_id ); ?></div>
 									<div class="clear"></div>
 								</div> <!-- #major-publishing-actions -->
 							</div> <!-- #submitbox -->

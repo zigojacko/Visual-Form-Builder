@@ -4,7 +4,7 @@ Plugin Name: Visual Form Builder
 Description: Dynamically build forms using a simple interface. Forms include jQuery validation, a basic logic-based verification system, and entry tracking.
 Author: Matthew Muro
 Author URI: http://matthewmuro.com
-Version: 2.7.3
+Version: 2.7.4
 */
 
 /*
@@ -686,7 +686,7 @@ class Visual_Form_Builder{
 		if ( !isset( $_REQUEST['action'] ) )
 			return;
 		
-		if ( in_array( $_REQUEST['page'], array( 'visual-form-builder', 'vfb-add-new' ) ) ) :
+		if ( in_array( $_REQUEST['page'], array( 'visual-form-builder', 'vfb-add-new', 'vfb-entries' ) ) ) :
 			switch ( $_REQUEST['action'] ) :
 				case 'create_form' :
 					
@@ -976,6 +976,11 @@ class Visual_Form_Builder{
 						$wpdb->update( $this->field_table_name, array( 'field_parent' => $v ), array( 'form_id' => $new_form_selected, 'field_parent' => $k ) );	
 					}
 					
+				break;
+				
+				case 'trash_entry' :
+					$entry_id = absint( $_GET['entry'] );
+					$wpdb->update( $this->entries_table_name, array( 'entry_approved' => 'trash' ), array( 'entries_id' => $entry_id ) );
 				break;
 			endswitch;
 		endif;
@@ -1452,11 +1457,14 @@ class Visual_Form_Builder{
                             <span class="vfb-tooltip" title="<?php esc_attr_e( 'About Validation', 'visual-form-builder' ); ?>" rel="<?php esc_attr_e( 'Ensures user-entered data is formatted properly. For more information on Validation, refer to the Help tab at the top of this page.', 'visual-form-builder' ); ?>">(?)</span>
                             <br />
 						   
-						   <?php if ( in_array( $field->field_type , array( 'text', 'time' ) ) ) : ?>
+						   <?php if ( in_array( $field->field_type , array( 'text', 'time', 'number' ) ) ) : ?>
 							   <select name="field_validation-<?php echo $field->field_id; ?>" class="widefat" id="edit-form-item-validation-<?php echo $field->field_id; ?>">
 							   		<?php if ( $field->field_type == 'time' ) : ?>
 									<option value="time-12" <?php selected( $field->field_validation, 'time-12' ); ?>><?php _e( '12 Hour Format' , 'visual-form-builder'); ?></option>
 									<option value="time-24" <?php selected( $field->field_validation, 'time-24' ); ?>><?php _e( '24 Hour Format' , 'visual-form-builder'); ?></option>
+									<?php elseif ( in_array( $field->field_type, array( 'number' ) ) ) : ?>
+	                                <option value="number" <?php selected( $field->field_validation, 'number' ); ?>><?php _e( 'Number' , 'visual-form-builder'); ?></option>
+									<option value="digits" <?php selected( $field->field_validation, 'digits' ); ?>><?php _e( 'Digits' , 'visual-form-builder'); ?></option>
 									<?php else : ?>
 									<option value="" <?php selected( $field->field_validation, '' ); ?>><?php _e( 'None' , 'visual-form-builder'); ?></option>
 									<option value="email" <?php selected( $field->field_validation, 'email' ); ?>><?php _e( 'Email' , 'visual-form-builder'); ?></option>
@@ -1984,7 +1992,7 @@ class Visual_Form_Builder{
 				break;
 				
 				case 'number' :
-					return intval( $data );
+					return floatval( $data );
 				break;
 				
 				case 'address' :
@@ -2028,10 +2036,12 @@ class Visual_Form_Builder{
 		
 		// Basic check for type when not set
 		if ( empty( $type ) ) :
-			if ( array_key_exists( 'address', $value ) )
+			if ( is_array( $value ) && array_key_exists( 'address', $value ) )
 				$type = 'address';
-			elseif ( array_key_exists( 'hour', $value ) && array_key_exists( 'min', $value ) )
+			elseif ( is_array( $value ) && array_key_exists( 'hour', $value ) && array_key_exists( 'min', $value ) )
 				$type = 'time';
+			elseif ( is_array( $value ) )
+				$type = 'checkbox';
 			else
 				$type = 'default';
 		endif;
@@ -2081,9 +2091,15 @@ class Visual_Form_Builder{
 				
 			break;
 						
+			case 'checkbox' :
+			
+				$output = esc_html( implode( ', ', $value ) );
+				
+			break;
+			
 			default :
 				
-				$output = ( isset( $value['other'] ) ) ? wp_specialchars_decode( stripslashes( esc_html( $value['other'] ) ), ENT_QUOTES, 'UTF-8' ) : esc_html( implode( ', ', $value ) );
+				$output = wp_specialchars_decode( stripslashes( esc_html( $value ) ), ENT_QUOTES );
 				
 			break;
 			

@@ -1,8 +1,4 @@
 <?php
-// Turn off caching plugin for this page to fix occasional nonce error
-if ( !defined( 'DONOTCACHEPAGE' ) )
-	define( 'DONOTCACHEPAGE', true );
-
 global $wpdb;
 
 // Extract shortcode attributes, set defaults
@@ -42,22 +38,29 @@ $open_fieldset = $open_section = false;
 $submit = 'Submit';
 $verification = '';
 
-// Current URL
-$current_url = 'http'. ( empty( $_SERVER['HTTPS'] ) ? '' : 's' ) . '://' . $_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI'];
-
 $label_alignment = ( $form->form_label_alignment !== '' ) ? " $form->form_label_alignment" : '';
-$output = '<div class="visual-form-builder-container"><form id="' . $form->form_key . '" class="visual-form-builder' . $label_alignment . '" method="post" 46="multipart/form-data">
-			<input type="hidden" name="form_id" value="' . $form->form_id . '" />';
 
+// Start form container
+$output .= '<div class="visual-form-builder-container">';
+
+$output .= sprintf(
+	'<form id="%1$s-%2$d" class="visual-form-builder %3$s %4$s" method="post" enctype="multipart/form-data">
+	<input type="hidden" name="form_id" value="%5$d" />',
+	esc_html( $form->form_key ),
+	$form_id,
+	"vfb-form-$form_id",
+	$label_alignment,
+	absint( $form->form_id )
+);
 foreach ( $fields as $field ) :
 	$field_id		= absint( $field->field_id );
 	$field_type 	= esc_html( $field->field_type );
-	// If field is required, build the span and add setup the 'required' class
+	$field_name		= stripslashes( $field->field_name );
 	$required_span 	= ( !empty( $field->field_required ) && $field->field_required === 'yes' ) ? ' <span>*</span>' : '';
 	$required 		= ( !empty( $field->field_required ) && $field->field_required === 'yes' ) ? ' required' : '';
 	$validation 	= ( !empty( $field->field_validation ) ) ? " $field->field_validation" : '';
 	$css 			= ( !empty( $field->field_css ) ) ? " $field->field_css" : '';
-	$id_attr 		= 'vfb-' . esc_html( $field->field_key ) . '-' . $field->field_id;
+	$id_attr 		= 'vfb-' . esc_html( $field->field_key ) . '-' . $field_id;
 	$size			= ( !empty( $field->field_size ) ) ? " vfb-$field->field_size" : '';
 	$layout 		= ( !empty( $field->field_layout ) ) ? " vfb-$field->field_layout" : '';
 	$default 		= ( !empty( $field->field_default ) ) ? wp_specialchars_decode( esc_html( stripslashes( $field->field_default ) ), ENT_QUOTES ) : '';
@@ -90,7 +93,7 @@ foreach ( $fields as $field ) :
 			$field->field_key,
 			$css,
 			$id_attr,
-			stripslashes( $field->field_name )
+			$field_name
 		);
 			
 		$open_fieldset = true;
@@ -102,7 +105,7 @@ foreach ( $fields as $field ) :
 			'<div class="vfb-section-div %1$s %2$s"><h4>%3$s</h4>',
 			$id_attr,
 			$css,
-			stripslashes( $field->field_name )
+			$field_name
 		);
 			
 		// Save section ID for future comparison
@@ -122,7 +125,7 @@ foreach ( $fields as $field ) :
 				$columns_choice,
 				$layout,
 				$id_attr,
-				stripslashes( $field->field_name ),
+				$field_name,
 				$required_span
 			);
 		endif;
@@ -136,7 +139,7 @@ foreach ( $fields as $field ) :
 				$field->field_key,
 				$css,
 				$id_attr,
-				stripslashes( $field->field_name )
+				$field_name
 			);
 		endif;
 		
@@ -201,7 +204,7 @@ foreach ( $fields as $field ) :
 			
 			$form_item = sprintf(
 				'<input type="%8$s" name="vfb-%1$d" id="%2$s" value="%3$s" class="vfb-text %4$s %5$s %6$s %7$s" />',
-				absint( $field->field_id ),
+				$field_id,
 				$id_attr,
 				$default,
 				$size,
@@ -219,7 +222,7 @@ foreach ( $fields as $field ) :
 			
 			$form_item = sprintf(
 				'<textarea name="vfb-%1$d" id="%2$s" class="vfb-textarea %4$s %5$s %6$s">%3$s</textarea>',
-				absint( $field->field_id ),
+				$field_id,
 				$id_attr,
 				$default,
 				$size,
@@ -243,12 +246,12 @@ foreach ( $fields as $field ) :
 			
 			// Loop through each option and output
 			foreach ( $field_options as $option => $value ) {
-				$options .= sprintf( '<option value="%1$s"%2$s>%1$s</option>', trim( stripslashes( $value ) ), selected( $default, ++$option, 0 ) );
+				$options .= sprintf( '<option value="%1$s"%2$s>%1$s</option>', esc_attr(trim( stripslashes( $value ) ) ), selected( $default, ++$option, 0 ) );
 			}
 			
 			$form_item = sprintf(
 				'<select name="vfb-%1$d" id="%2$s" class="vfb-select %3$s %4$s %5$s">%6$s</select>',
-				absint( $field->field_id ),
+				$field_id,
 				$id_attr,
 				$size,
 				$required,
@@ -268,15 +271,18 @@ foreach ( $fields as $field ) :
 			
 			// Loop through each option and output
 			foreach ( $field_options as $option => $value ) {
+				$option++;
+				
 				$options .= sprintf(
-					'<span><input type="radio" name="vfb-%1$d" id="%2$s-%3$d" value="%6$s" class="vfb-radio %4$s %5$s"%7$s /><label for="%2$s-%3$d" class="vfb-choice">%6$s</label></span>',
-					absint( $field->field_id ),
+					'<span><input type="radio" name="vfb-%1$d" id="%2$s-%3$d" value="%6$s" class="vfb-radio %4$s %5$s"%8$s /><label for="%2$s-%3$d" class="vfb-choice">%7$s</label></span>',
+					$field_id,
 					$id_attr,
 					$option,
 					$required,
 					$css,
-					trim( stripslashes( $value ) ),
-					checked( $default, ++$option, 0 )
+					esc_attr( trim( stripslashes( $value ) ) ),
+					wp_specialchars_decode( stripslashes( $value ) ),
+					checked( $default, $option, 0 )
 				);
 			}
 			
@@ -299,13 +305,14 @@ foreach ( $fields as $field ) :
 			// Loop through each option and output
 			foreach ( $field_options as $option => $value ) {
 				$options .= sprintf(
-					'<span><input type="checkbox" name="vfb-%1$d[]" id="%2$s-%3$d" value="%6$s" class="vfb-checkbox %4$s %5$s"%7$s /><label for="%2$s-%3$d" class="vfb-choice">%6$s</label></span>',
-					absint( $field->field_id ),
+					'<span><input type="checkbox" name="vfb-%1$d[]" id="%2$s-%3$d" value="%6$s" class="vfb-checkbox %4$s %5$s"%8$s /><label for="%2$s-%3$d" class="vfb-choice">%7$s</label></span>',
+					$field_id,
 					$id_attr,
 					$option,
 					$required,
 					$css,
-					trim( stripslashes( $value ) ),
+					esc_attr( trim( stripslashes( $value ) ) ),
+					wp_specialchars_decode( stripslashes( $value ) ),
 					checked( $default, ++$option, 0 )
 				);
 			}
@@ -368,7 +375,7 @@ foreach ( $fields as $field ) :
 										
 					$address .= sprintf(
 						'<span class="vfb-%3$s"><select name="vfb-%1$d[%4$s]" class="vfb-select %7$s %8$s" id="%2$s-%4$s">%6$s</select><label for="%2$s-%4$s">%5$s</label></span>',
-						absint( $field->field_id ),
+						$field_id,
 						$id_attr,
 						$part['layout'],
 						$parts,
@@ -382,7 +389,7 @@ foreach ( $fields as $field ) :
 					
 					$address .= sprintf(
 						'<span class="vfb-%3$s"><input type="text" name="vfb-%1$d[%4$s]" id="%2$s-%4$s" maxlength="150" class="vfb-text vfb-medium %7$s %8$s" /><label for="%2$s-%4$s">%5$s</label></span>',
-						absint( $field->field_id ),
+						$field_id,
 						$id_attr,
 						$part['layout'],
 						$parts,
@@ -404,7 +411,7 @@ foreach ( $fields as $field ) :
 			
 			$form_item = sprintf(
 				'<input type="text" name="vfb-%1$d" id="%2$s" value="%3$s" class="vfb-text vfb-date-picker %4$s %5$s %6$s" />',
-				absint( $field->field_id ),
+				$field_id,
 				$id_attr,
 				$default,
 				$size,
@@ -445,7 +452,7 @@ foreach ( $fields as $field ) :
 			if ( $time_format == '12' ) {
 				$ampm = sprintf(
 					'<span class="vfb-time"><select name="vfb-%1$d[ampm]" id="%2$s-ampm" class="vfb-select %5$s %6$s"><option value="AM">AM</option><option value="PM">PM</option></select><label for="%2$s-ampm">AM/PM</label></span>',
-					absint( $field->field_id ),
+					$field_id,
 					$id_attr,
 					$hour,
 					$minute,
@@ -458,7 +465,7 @@ foreach ( $fields as $field ) :
 				'<span class="vfb-time"><select name="vfb-%1$d[hour]" id="%2$s-hour" class="vfb-select %5$s %6$s">%3$s</select><label for="%2$s-hour">HH</label></span>' .
 				'<span class="vfb-time"><select name="vfb-%1$d[min]" id="%2$s-min" class="vfb-select %5$s %6$s">%4$s</select><label for="%2$s-min">MM</label></span>' .
 				'%7$s',
-				absint( $field->field_id ),
+				$field_id,
 				$id_attr,
 				$hour,
 				$minute,
@@ -478,7 +485,7 @@ foreach ( $fields as $field ) :
 			$form_item = sprintf(
 				'<script type="text/javascript">edToolbar("%2$s");</script>' .
 				'<textarea name="vfb-%1$d" id="%2$s" class="vfb-textarea vfbEditor %4$s %5$s %6$s">%3$s</textarea>',
-				absint( $field->field_id ),
+				$field_id,
 				$id_attr,
 				$default,
 				$size,
@@ -502,7 +509,7 @@ foreach ( $fields as $field ) :
 			
 			$form_item = sprintf(
 				'<input type="file" name="vfb-%1$d" id="%2$s" value="%3$s" class="vfb-text %4$s %5$s %6$s %7$s %8$s" />',
-				absint( $field->field_id ),
+				$field_id,
 				$id_attr,
 				$default,
 				$size,
@@ -512,8 +519,8 @@ foreach ( $fields as $field ) :
 				$accept
 			);
 			
-			$output .= ( !empty( $description ) ) ? sprintf( '<span>%1$s<label>%2$s</label></span>', $form_item, $description ) : $form_item;
-			
+			$output .= ( !empty( $description ) ) ? sprintf( '<span>%1$s<label>%2$s</label></span>', $form_item, $description ) : $form_item;			
+		
 		break;
 		
 		case 'instructions' :
@@ -523,11 +530,13 @@ foreach ( $fields as $field ) :
 		break;
 		
 		case 'submit' :							
-			
 			$submit = sprintf(
-				'<li class="vfb-item vfb-item-submit" id="%2$s"><input type="submit" name="visual-form-builder-submit" value="%1$s" class="vfb-submit %3$s" id="sendmail" /></li>',
-				esc_attr( stripslashes( $field->field_name ) ),
+				'<li class="vfb-item vfb-item-submit" id="%2$s">
+				<input type="submit" name="visual-form-builder-submit" id="sendmail" value="%3$s" class="vfb-submit %4$s" />
+				</li>',
+				$field_id,
 				$id_attr,
+				wp_specialchars_decode( esc_html( $field_name ), ENT_QUOTES ),
 				$css
 			);
 			
@@ -573,7 +582,7 @@ $output .= sprintf(
 	$submit
 );
 
-$output .= sprintf( '<input type="hidden" name="vfb_referral_url" value="%s">', $current_url );
+$output .= wp_referer_field( false );
 
 // Close the form out
 $output .= '</form>';
